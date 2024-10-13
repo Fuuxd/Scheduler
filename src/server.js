@@ -1,10 +1,10 @@
 const express = require('express');
 const { exec } = require('child_process'); // To run C++ executable
-//const cors = require('cors'); // To allow cross-origin requests from your webpage
 const bodyParser = require('body-parser');
+//const cors = require('cors'); // To allow cross-origin requests from your webpage
 
 const app = express();
-const port = 3000;
+const port = 8080;
 
 //app.use(cors());
 app.use(express.json()); // To parse JSON body in requests

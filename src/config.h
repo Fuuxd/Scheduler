@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iterator>
 #include <utility>
+#include <cfloat>
 
 //boost related
 #include <boost/config.hpp>

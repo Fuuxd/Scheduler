@@ -1,3 +1,5 @@
+//TODO: FIX GENERAL ELECTIVE HANDLING IN BINNING PERMUTE
+
 // Big conundrum appears with the ORs in the course requirements
 // as the directed edge does not know if the other one is picked it doesnt need to be picked
 
@@ -42,9 +44,12 @@ int main(){
     //printSchedule(&binnedSchedule);
     
     //std::cout << std::endl << std::endl;
-
-    binnedSchedule = layeredBinningPermute(G, creditsPerSemester, genElectives, nodeLabs, 100000);
     
+    std::set<Vertex> emptySet {};
+
+    binnedSchedule = layeredBinningPermute(G, creditsPerSemester, genElectives, nodeLabs, emptySet, 100000);
+    //binnedSchedule = stepLayeredBinningPermute(G, creditsPerSemester, genElectives, nodeLabs, emptySet, 1000000, 2);
+
     std::cout << "Semester plan for " << std::to_string(creditsPerSemester) << " credits per semester (" << std::endl;
 
     printSchedule(&binnedSchedule);

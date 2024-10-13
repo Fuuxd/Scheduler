@@ -26,6 +26,9 @@ std::vector<Vertex> getNoInEdgeVertexes(directedGraphCourses& g) {
 std::vector<std::vector<node>> layeredTopoSort(directedGraphCourses& g, std::set<Vertex> coursesTaken) {
     std::vector<std::vector<node>> layers;
     std::set<Vertex> processedVertices = coursesTaken; // Set to track processed vertices
+    for (Vertex v : processedVertices){
+        boost::clear_out_edges(v, g);
+    }
 
     while (processedVertices.size() < num_vertices(g)) {
         // Get all vertices with no incoming edges and not yet processed

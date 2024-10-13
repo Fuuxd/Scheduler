@@ -208,7 +208,7 @@ std::vector<semesterVector> layeredBinningFirst(directedGraphCourses& g, uint8_t
 }
 
 bool nextPermutationIndices(std::vector<std::vector<size_t>>& indices, const std::vector<std::vector<node>>& vecOfVecs) {
-    for (size_t i = 0; i < vecOfVecs.size(); ++i) {
+    for (size_t i = 0; i < indices.size(); ++i) {
         if (std::next_permutation(indices[i].begin(), indices[i].end())) {
             return true;
         } else {
@@ -287,7 +287,6 @@ std::vector<std::vector<T>> generatePermutation(const std::vector<std::vector<T>
 
 std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8_t creditsPerSemester, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken, uint iterationLimit = 100000){
 
-    std::vector<float> complexities;
     std::vector<semesterVector> schedule;
 
     std::vector<std::vector<node>> topoLayers = layeredTopoSort(g, coursesTaken);
@@ -316,6 +315,7 @@ std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8
     std::vector<std::vector<size_t>> indicesMin;
     int minIndex = -1;         // To store the index of the minimum non-zero value
     float minValue = FLT_MAX; // Start with a very large number
+    float complexityCompare;
     // Iterate over permutations without changing the outer vector positions
     do {
         // Generate the current permutation based on indices
@@ -329,11 +329,11 @@ std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8
 
         // Call your getComplexity() or any other method on the current permutation
         schedule = layeredBinning(g, creditsPerSemester, genElectives, labs, permutedTopo);
-        complexities.push_back(getComplexity( &schedule));
+        complexityCompare = getComplexity( &schedule);
         iterationLimit--;
 
-        if(complexities.back() < minValue){
-            minValue = complexities.back();
+        if( complexityCompare < minValue){
+            minValue = complexityCompare;
             indicesMin = indices;
         }
 
@@ -372,8 +372,8 @@ std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8
     //}
     //std::cout << std::endl;
 
-    //std::cout << std::endl << "Indices picked" << std::endl;
-    //printVectorOfVectors(indicesMin);
+    std::cout << std::endl << "Indices picked" << std::endl;
+    printVectorOfVectors(indicesMin);
 
     //std::cout << "BEST PERMUTATION CHOSEN:" << std::endl;
     //for (size_t i = 0; i < permutedTopo.size(); ++i) {
@@ -387,3 +387,165 @@ std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8
 
     return layeredBinning(g, creditsPerSemester, genElectives, labs, permutedTopo);
 }
+
+//Wrapper function to prevent the problems from calling layeredTopoSort multiple times
+//MAIN FUNCTION IS TO POPULATE THE INDEXES 
+void binningPermuteUtil(directedGraphCourses& g, uint8_t creditsPerSemester, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken, std::vector<std::vector<node>> topoLayers, std::vector<bool> toPermute, std::vector<std::vector<size_t>>* steppedIndexes, uint iterationLimit = 100000){
+
+    std::vector<semesterVector> schedule;
+
+    //std::cout << "permuting Layered toposort out:" << std::endl;
+    //for (size_t i = 0; i < topoLayers.size(); ++i) {
+    //    std::cout << "Layer " << i + 1 << ":" << std::endl;
+    //    for (const node& n : topoLayers[i]) {
+    //        // Print CRS and Name of each node in the layer
+    //        std::cout << n.getCRS() << " " << n.getName() << "    ";
+    //    }
+    //    std::cout << std::endl;
+    //}
+    
+
+    std::vector<std::vector<size_t>> indices;
+    std::vector<std::vector<size_t>> currentlyPermutingIndices;
+
+    for (size_t i = 0; i < topoLayers.size(); i++) {
+        std::vector<size_t> idx(topoLayers[i].size());
+        for (size_t j = 0; j < topoLayers[i].size(); ++j) {
+            idx[j] = j;
+        }
+        indices.push_back(idx);
+
+        if(toPermute[i]){
+            currentlyPermutingIndices.push_back(idx);
+        }
+    }
+
+    for(size_t i = 0; i < steppedIndexes->size(); i++){
+        indices[i] = steppedIndexes->at(i);
+    }
+
+    std::vector<std::vector<size_t>> indicesMin;
+
+    int minIndex = -1;         // To store the index of the minimum non-zero value
+    float minValue = FLT_MAX; // Start with a very large number
+    float complexityCompare;
+    // Iterate over permutations without changing the outer vector positions
+    do {
+        // Generate the current permutation based on indices
+
+        
+        std::vector<std::vector<node>> permutedTopo = topoLayers;
+        size_t k = 0;
+        for (size_t i = 0; i < permutedTopo.size(); ++i) {
+            if(toPermute[i]){
+                for (size_t j = 0; j < permutedTopo[i].size(); ++j) {
+                    permutedTopo[i][j] = topoLayers[i][currentlyPermutingIndices[k][j]];  
+                }
+                k++;
+            }else{
+                for (size_t j = 0; j < permutedTopo[i].size(); ++j) {
+                    permutedTopo[i][j] = topoLayers[i][indices[i][j]];
+                }
+            }
+
+        }
+
+
+        // Call your getComplexity() or any other method on the current permutation
+        schedule = layeredBinning(g, creditsPerSemester, genElectives, labs, permutedTopo);
+        complexityCompare = getComplexity( &schedule);
+        iterationLimit--;
+
+        if( complexityCompare < minValue){
+            minValue = complexityCompare;
+            indicesMin = indices;
+        }
+
+        if(iterationLimit < 1){
+            std::cout << "Iteration limit hit";
+            break;
+        }
+
+    } while (nextPermutationIndices(currentlyPermutingIndices, topoLayers));
+
+    if(minValue == FLT_MAX){
+        std::cerr << "failed to find easiest schedule";
+        exit(EXIT_FAILURE);
+    }
+
+    //std::vector<std::vector<node>> permutedTopo = generatePermutation(topoLayers, minIndex);
+
+    //std::cout << "COMPLEXITIES:" << std::endl;
+    //int checkinComplexi = 1000;
+    //for(auto number : complexities){
+    //    std::cout << number << "   ";
+    //    checkinComplexi--;
+    //    if(checkinComplexi < 1){
+    //        break;
+    //    }
+    //}
+    //std::cout << std::endl;
+
+    //std::cout << std::endl << "Indices picked" << std::endl;
+    //printVectorOfVectors(indicesMin);
+
+    //std::cout << "BEST PERMUTATION CHOSEN:" << std::endl;
+    //for (size_t i = 0; i < permutedTopo.size(); ++i) {
+    //    std::cout << "Layer " << i + 1 << ":" << std::endl;
+    //    for (const node& n : permutedTopo[i]) {
+    //        // Print CRS and Name of each node in the layer
+    //        std::cout << n.getCRS() << " " << n.getName() << "    ";
+    //    }
+    //    std::cout << std::endl;
+    //}
+
+    if(toPermute.back()){
+        for(size_t i = 0; i < currentlyPermutingIndices.size(); i++){
+            steppedIndexes->push_back(currentlyPermutingIndices[i]);
+        }
+    }else{
+        steppedIndexes->push_back(currentlyPermutingIndices.front());
+    }
+
+    return;
+}
+
+
+std::vector<semesterVector> stepLayeredBinningPermute(directedGraphCourses& g, uint8_t creditsPerSemester, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken, uint iterationLimit = 100000, size_t windowSize = 2){
+
+    std::vector<semesterVector> schedule;
+    
+    std::vector<std::vector<node>> topoLayers = layeredTopoSort(g, coursesTaken);
+
+
+    std::vector<std::vector<size_t>> steppedIndexes;
+
+    for(size_t i = 0; i < topoLayers.size()-windowSize+1; i++){
+        std::vector<std::vector<node>> layerWindow;
+        std::vector<semesterVector> schedForWindow;
+
+        std::vector<bool> toPermute(topoLayers.size());
+
+        for(size_t j = 0; j < windowSize; j++){
+            layerWindow.push_back(topoLayers[i+j]);
+            toPermute[i+j] = true;
+        }
+
+        //below populates indices
+        binningPermuteUtil(g, creditsPerSemester, genElectives, labs, coursesTaken, topoLayers, toPermute, &steppedIndexes, iterationLimit);
+
+    }
+
+    std::vector<std::vector<node>> permutedTopo = topoLayers;
+    for (size_t i = 0; i < permutedTopo.size(); ++i) {
+        for (size_t j = 0; j < permutedTopo[i].size(); ++j) {
+            permutedTopo[i][j] = topoLayers[i][steppedIndexes[i][j]]; 
+        }
+    }
+
+    printVectorOfVectors( steppedIndexes);
+
+    return layeredBinning(g, creditsPerSemester, genElectives, labs, permutedTopo);
+
+}
+
