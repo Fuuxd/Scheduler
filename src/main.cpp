@@ -47,8 +47,12 @@ int main(){
     
     std::set<Vertex> emptySet {};
 
-    binnedSchedule = layeredBinningPermute(G, creditsPerSemester, genElectives, nodeLabs, emptySet, 100000);
-    //binnedSchedule = stepLayeredBinningPermute(G, creditsPerSemester, genElectives, nodeLabs, emptySet, 1000000, 2);
+    bool takingSummer = true;
+    uint8_t creditsPerSummer = 9; 
+    uint8_t semestersBeforeSummer = 4;
+
+    //binnedSchedule = layeredBinningPermute(G, creditsPerSemester, genElectives, nodeLabs, emptySet, 100000);
+    binnedSchedule = stepLayeredBinningPermute(G, creditsPerSemester, takingSummer, creditsPerSummer, semestersBeforeSummer, genElectives, nodeLabs, emptySet, 1000000, 3);
 
     std::cout << "Semester plan for " << std::to_string(creditsPerSemester) << " credits per semester (" << std::endl;
 

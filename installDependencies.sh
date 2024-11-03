@@ -39,4 +39,7 @@ npm init -y
 echo "Installing express..."
 npm install express
 
+echo "Installing pm2..."
+npm -g install pm2
+
 echo "Now run webUI.sh and then run node server.js in the ./src directory"

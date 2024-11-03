@@ -46,7 +46,17 @@ public:
     ~node() = default;
 
     int getCRS() const { return CRS;}
+
     std::string getName() const { return courseName;}
+
+    section getSection() const {
+        //Manage obtaining open sections. For now just get the first available one.
+        if (!sections.empty()) {
+            return sections[0]; // Return the first available section
+        } else {
+            throw std::out_of_range("No sections available");
+        }
+    }
 
     bool operator==(const node& other) const {
         return CRS == other.CRS && courseName == other.courseName;
@@ -67,6 +77,6 @@ struct vertex_writer {
     void operator()(std::ostream& out, const Vertex& v) const {
         const node& n = boost::get(boost::vertex_name, graph)[v];
         std::size_t index = boost::get(boost::vertex_index, graph)[v];
-        out << "[label=\"" << std::to_string(n.getCRS())  << "\", shape=\"square\"]"; //change to std::tostring n.getCRS() if desired
+        out << "[label=\"" << std::to_string(n.getCRS()) << "\", shape=\"square\"]"; //change to std::tostring n.getCRS() if desired
     }
 };

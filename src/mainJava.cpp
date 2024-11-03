@@ -35,6 +35,8 @@ int main(int argc, char* argv[]){
 
     std::set<Vertex> vertexSet;
 
+    //TODO: get credits taken somewhere out of the nodes ehre
+
     // Iterate over each string in nodeNames
     for (const std::string& nodeIndexStr : nodes) {
         try {
@@ -43,7 +45,7 @@ int main(int argc, char* argv[]){
 
             // Check if the index is valid
             if (nodeIndex >= boost::num_vertices(G)) {
-                std::cerr << "Invalid index: " << nodeIndexStr << " (out of range)" << std::endl;
+                std::cout << "Invalid index: " << nodeIndexStr << " (out of range)" << std::endl;
                 continue;  // Skip invalid indices
             }
 
@@ -62,7 +64,7 @@ int main(int argc, char* argv[]){
 
     uint8_t creditsPerSemester = 15;
 
-    std::vector<semesterVector> binnedSchedule = layeredBinningPermute(G, creditsPerSemester, genElectives, nodeLabs, vertexSet, 100000);
+    std::vector<semesterVector> binnedSchedule = stepLayeredBinningPermute(G, creditsPerSemester, true, 9, 4, genElectives, nodeLabs, vertexSet, 1000000, 3);
     
     std::cout << "Semester plan for " << std::to_string(creditsPerSemester) << " credits per semester (" << std::endl;
 

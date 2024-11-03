@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 //const cors = require('cors'); // To allow cross-origin requests from your webpage
 
 const app = express();
-const port = 8080;
+const port = 3000;
 
 //app.use(cors());
 app.use(express.json()); // To parse JSON body in requests
@@ -21,7 +21,7 @@ app.post('/calculate', (req, res) => {
     if (nodeCount > 0) {
         const nodeList = checkedNodes.join(' '); // Create a space-separated string of node IDs
         const command = `./scheduleCreator ${nodeCount} ${nodeList}`; // Assuming your C++ program takes node IDs as arguments
-
+        console.log(command);
         // Execute the C++ program
         exec(command, (error, stdout, stderr) => {
             if (error) {

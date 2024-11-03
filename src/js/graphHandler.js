@@ -1,4 +1,3 @@
-// Wait for the SVG <object> to be fully loaded
 document.getElementById('graph').addEventListener('load', function() {
     // Access the inner document of the loaded SVG
     var svgDoc = this.contentDocument; // Access the SVG document inside the <object>
@@ -9,15 +8,16 @@ document.getElementById('graph').addEventListener('load', function() {
         // Add click event listener to each node
         node.addEventListener('click', function() {
             let polygon = node.querySelector('polygon'); // Get the polygon inside the node group
+            let title = node.querySelector('title') ? node.querySelector('title').textContent : null; // Get the title text
             if (polygon) {
-                if (checkedNodes.has(node.id)) {
+                if (checkedNodes.has(title)) {
                     // If already checked, uncheck by reverting color and removing from the set
                     polygon.setAttribute('fill', 'white'); // Revert to original color (empty string)
-                    checkedNodes.delete(node.id); // Remove from the set
+                    checkedNodes.delete(title); // Remove from the set
                 } else {
                     // Otherwise, check by changing color and adding to the set
                     polygon.setAttribute('fill', 'red'); // Change to red on click
-                    checkedNodes.add(node.id); // Add to the set
+                    checkedNodes.add(title); // Add the title to the set
                 }
             }
         });
@@ -28,6 +28,7 @@ document.getElementById('graph').addEventListener('load', function() {
         let checkedList = Array.from(checkedNodes); // Convert the set to an array
 
         const nodeCount = checkedList.length;
+        console.log(checkedNodes);
 
         if (nodeCount > 0) {
             fetch('/calculate', {

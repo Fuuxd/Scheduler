@@ -68,6 +68,106 @@ std::vector<std::vector<node>> layeredTopoSort(directedGraphCourses& g, std::set
     return layers;
 }
 
+/// @brief THIS METHOD DESTROYS THE EDGES OF THE GRAPH. check Binning.md for further explanation.
+/// @param g boost directed graph defined in config through typdef
+/// @return layers of nodes
+std::vector<std::vector<node>> pyramidalLayeredTopoSort(directedGraphCourses& g, std::set<Vertex> coursesTaken) {
+
+    directedGraphCourses graphCopy = g;
+    std::vector<std::vector<Vertex>> layers;
+    std::set<Vertex> processedVertices = coursesTaken; // Set to track processed vertices
+    
+    for (Vertex v : processedVertices){
+        boost::clear_out_edges(v, g);
+    }
+
+    while (processedVertices.size() < num_vertices(g)) {
+        // Get all vertices with no incoming edges and not yet processed
+        std::vector<Vertex> layer = getNoInEdgeVertexes(g);
+
+        // Filter out already processed vertices
+        layer.erase(
+            std::remove_if(layer.begin(), layer.end(), [&processedVertices](Vertex v) {
+                return processedVertices.find(v) != processedVertices.end();
+            }),
+            layer.end()
+        );
+
+        // If no new vertices can be processed but not all vertices have been processed, there is a cycle
+        if (layer.empty()) {
+            if (processedVertices.size() < num_vertices(g)) {
+                std::cerr << "Graph contains a cycle, cannot proceed with topological sorting." << std::endl;
+                return {}; // Return empty result to indicate failure
+            }
+            break;
+        }
+
+        for(Vertex v : layer){
+            processedVertices.insert(v); // Mark the vertex as processed
+            boost::clear_out_edges(v, g);
+        }
+
+        // Add the node layer to the list of layers
+        layers.push_back(layer);
+    }
+
+    //make pyramidal by moving vertex to layer below if vertex has no outgoing edges going to the layer below. 
+    for (size_t i = 2; i < layers.size() - 2; i++) {
+        if (layers[i].size() <= 3) continue; //skip if three or fewer nodes
+
+        for (auto it = layers[i].begin(); it != layers[i].end(); ) { //No increment see how it++ is handled below.
+            bool foundEdgeBelow = false;
+
+        // Get the range of outgoing edges
+        auto outEdges = boost::make_iterator_range(boost::out_edges(*it, graphCopy));
+
+        // Check if there are no outgoing edges
+        if (outEdges.empty()) {
+            // No need to check further, foundEdgeBelow remains false
+            //layers[i + 1].push_back(*it);  // Move vertex to the next layer
+            //it = layers[i].erase(it);  // Erase current element and update iterator
+            it++;
+            continue;  // Move to the next element in layers[i]
+        }
+
+        // Iterate over outgoing edges if they exist
+        for (auto edge : outEdges) {
+            Vertex target = boost::target(edge, graphCopy);
+            for (size_t k = 0; k < layers[i + 1].size(); k++) {
+                if (target == layers[i + 1][k]) {
+                    foundEdgeBelow = true;
+                    break;
+                }
+            }
+            if (foundEdgeBelow) break;  // No need to check further edges
+        }
+
+            if (!foundEdgeBelow) {
+                layers[i + 1].push_back(*it);  // Move element to the next layer
+                
+                // Safely erase the current element from layers[i] and move the iterator
+                it = layers[i].erase(it);  // Erase returns the next iterator
+            } else {
+                ++it;  // Only increment if no deletion occurred
+            }
+        }
+    }
+
+
+    // Store the node objects from each vertex
+    std::vector<std::vector<node>> nodeLayers;
+    for (auto vector: layers){
+        std::vector<node> nodeLayer;
+        for (Vertex v : vector) {
+            node& nodeData = boost::get(boost::vertex_name, g, v);
+            nodeLayer.push_back(nodeData);
+        }
+        nodeLayers.push_back(nodeLayer);
+    }
+
+    return nodeLayers;
+}
+
 
 // ALL topo Sorts
 
@@ -215,3 +315,6 @@ std::vector<std::vector<node>> allTopologicalSorts(directedGraphCourses& g, uint
     return all_sorts;  // Return the collection of all topological sorts
 }
 
+void makePyramidal(directedGraphCourses& g, std::vector<std::vector<node>>& nodeVectors){
+    //
+}

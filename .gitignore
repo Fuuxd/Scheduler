@@ -4,3 +4,6 @@
 
 #ignore all pre-created graphs
 .svg
+
+#no json files necessary (created by node init)
+.json

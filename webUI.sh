@@ -1,6 +1,6 @@
 #Linux only
 #make sure that you make this script executable as in:
-# chmod +x buildExecutable.sh
+# chmod +x webUI.sh
 
 #Go to src directory
 cd ./src
@@ -17,7 +17,7 @@ g++ mainJava.cpp -o scheduleCreator
 
 #Start server
 Echo "Starting server"
-node server.js
+pm2 start server.js
 
-Echo "open above link in your preferred browser or Ctrl+click it"
+pm2 status
 

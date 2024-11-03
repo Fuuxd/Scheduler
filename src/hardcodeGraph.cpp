@@ -1,8 +1,11 @@
+#pragma once
 #include "config.h"
 #include "node.h"
 
-    std::vector<node> genElectives;
-    std::vector<node> nodeLabs;
+std::vector<node> genElectives;
+std::vector<node> nodeLabs;
+
+std::vector<std::vector<node>> baseSchedule;
 
 directedGraphCourses G;
 
@@ -63,8 +66,8 @@ void hardcodeGraph(){
 
     // FOUNDATIONS OF ENGINEERING LAB
     std::vector<section> sections7 = {
-        {89775, 3, 1},
-        {96439, 3, 1}
+        {89775, 3, 4},
+        {96439, 3, 4}
     };
 
     std::vector<section> sections0 = {
@@ -78,23 +81,28 @@ void hardcodeGraph(){
     };
 
     std::vector<section> dummySecHarder = {
-        {99999, 3, 5},
-        {99999, 3, 5}
+        {99999, 3, 4},
+        {99999, 3, 4}
     };
 
     std::vector<section> dummySecHard = {
-        {99999, 3, 5},
-        {99999, 3, 5}
+        {99999, 3, 3},
+        {99999, 3, 3}
     };
 
     std::vector<section> dummySecMedium = {
-        {99999, 3, 5},
-        {99999, 3, 5}
+        {99999, 3, 2},
+        {99999, 3, 2}
+    };
+
+    std::vector<section> dummySecMediumLabs = {
+        {99999, 1, 2},
+        {99999, 1, 2}
     };
 
     std::vector<section> dummySecEasy = {
-        {99999, 3, 5},
-        {99999, 3, 5}
+        {99999, 3, 1},
+        {99999, 3, 1}
     };
     
 
@@ -104,8 +112,8 @@ void hardcodeGraph(){
     node calc2(2282, "Calculus 2", dummySecHardest); //1
     node calc3(2283, "Calculus 3", dummySecHardest); //2
     node comp1(1101, "Composition 1", dummySecMedium); //3
-    node comp2(1102, "Compostion 2", dummySecMedium); //4
-    node foundatEng(3000, "Foundations of Engineering", true, dummySecHard); //5
+    node comp2(1102, "Composition 2", dummySecMedium); //4
+    node foundatEng(3000, "Foundations of Engineering", true, sections6); //5
 
     node phys1(2048, "Physics 1", true, dummySecHardest); //6
 
@@ -137,11 +145,11 @@ void hardcodeGraph(){
     node SoftEl6(7777, "CSE Elective", dummySecHard);//28
 
     //I will determine labs to be dummySecMed
-    node foundatEngL(3000, "Foundations of Engineering Lab", dummySecMedium); //corresponds to sections7
-    node phys1L(2048, "Physics 1 Lab", dummySecMedium); 
-    node phys2L(2049, "Physics 2 Lab", dummySecMedium); 
-    node cda2L(3201, "Computer Logic Design Lab", dummySecMedium); 
-    node cda3L(4205, "Computer Architecture Lab", dummySecMedium); 
+    node foundatEngL(3000, "Foundations of Engineering Lab", sections7); //corresponds to sections7
+    node phys1L(2048, "Physics 1 Lab", dummySecMediumLabs); 
+    node phys2L(2049, "Physics 2 Lab", dummySecMediumLabs); 
+    node cda2L(3201, "Computer Logic Design Lab", dummySecMediumLabs); 
+    node cda3L(4205, "Computer Architecture Lab", dummySecMediumLabs); 
 
     node GenEd1(2999, "General Elective", dummySecEasy); 
     node GenEd2(2999, "General Elective", dummySecEasy); 
@@ -156,7 +164,7 @@ void hardcodeGraph(){
 
     boost::add_vertex(calc1, G);
     boost::add_vertex(calc2, G);
-    boost::add_vertex(calc3, G);
+    //boost::add_vertex(calc3, G); NO longer core in 2024 (I took this in summer it was pretty hard but fun)
     boost::add_vertex(comp1, G);
     boost::add_vertex(comp2, G);
     boost::add_vertex(foundatEng, G);
@@ -194,46 +202,56 @@ void hardcodeGraph(){
     //boost::add_vertex(GenEd9, G);
     //boost::add_vertex(GenEd10, G);
 
-    boost::add_edge(0, 1, G);
-    boost::add_edge(1, 2, G);
-    boost::add_edge(3, 4, G);
-    boost::add_edge(0, 6, G);
-    boost::add_edge(0, 7, G);
-    boost::add_edge(0, 8, G);
-    boost::add_edge(6, 9, G);
-    boost::add_edge(1, 9, G);
-    boost::add_edge(1, 14, G);
-    boost::add_edge(1, 15, G);
-    boost::add_edge(7, 11, G);
-    boost::add_edge(7, 10, G);
-    boost::add_edge(8, 12, G);
-    boost::add_edge(10, 12, G);
-    boost::add_edge(10, 13, G);
-    boost::add_edge(11, 12, G);
-    boost::add_edge(11, 13, G);
-    boost::add_edge(13, 16, G);
-    boost::add_edge(12, 17, G);
-    boost::add_edge(12, 19, G);
-    boost::add_edge(12, 20, G);
-    boost::add_edge(12, 21, G);
+    boost::add_edge(0, 1, G);  // calc1 -> calc2
+    boost::add_edge(2, 3, G);  // comp1 -> comp2
+    boost::add_edge(0, 5, G);  // calc1 -> phys1
+    boost::add_edge(0, 6, G);  // calc1 -> cop1
+    boost::add_edge(0, 7, G);  // calc1 -> discStruct
+    boost::add_edge(5, 8, G);  // phys1 -> phys2
+    boost::add_edge(1, 8, G);  // calc2 -> phys2
+    boost::add_edge(1, 13, G); // calc2 -> ProbNStats
+    boost::add_edge(1, 14, G); // calc2 -> linSys
+    boost::add_edge(6, 10, G); // cop1 -> cda1
+    boost::add_edge(6, 9, G);  // cop1 -> cop2
+    boost::add_edge(7, 11, G); // discStruct -> cop3
+    boost::add_edge(9, 11, G); // cop2 -> cop3
+    boost::add_edge(9, 12, G); // cop2 -> cda2
+    boost::add_edge(10, 11, G); // cda1 -> cop3
+    boost::add_edge(10, 12, G); // cda1 -> cda2
+    boost::add_edge(12, 15, G); // cda2 -> cda3
+    boost::add_edge(11, 16, G); // cop3 -> cop4
+    boost::add_edge(11, 18, G); // cop3 -> secCode
+    boost::add_edge(11, 19, G); // cop3 -> opSys
+    boost::add_edge(11, 20, G); // cop3 -> softEng
 
-    //for electives: prereqs are cda2 and cop3
-
-    boost::add_edge(12, 23, G);
-    boost::add_edge(13, 23, G);
-    boost::add_edge(12, 24, G);
-    boost::add_edge(13, 24, G);
-    boost::add_edge(12, 25, G);
-    boost::add_edge(13, 25, G);
-    boost::add_edge(12, 26, G);
-    boost::add_edge(13, 26, G);
-    boost::add_edge(12, 27, G);
-    boost::add_edge(13, 27, G);
-    boost::add_edge(12, 28, G);
-    boost::add_edge(13, 28, G);
+    // Elective prerequisites
+    boost::add_edge(11, 22, G); // cop3 -> SoftEl1
+    boost::add_edge(12, 22, G); // cda2 -> SoftEl1
+    boost::add_edge(11, 23, G); // cop3 -> SoftEl2
+    boost::add_edge(12, 23, G); // cda2 -> SoftEl2
+    boost::add_edge(11, 24, G); // cop3 -> SoftEl3
+    boost::add_edge(12, 24, G); // cda2 -> SoftEl3
+    boost::add_edge(11, 25, G); // cop3 -> SoftEl4
+    boost::add_edge(12, 25, G); // cda2 -> SoftEl4
+    boost::add_edge(11, 26, G); // cop3 -> SoftEl5
+    boost::add_edge(12, 26, G); // cda2 -> SoftEl5
+    boost::add_edge(11, 27, G); // cop3 -> SoftEl6
+    boost::add_edge(12, 27, G); // cda2 -> SoftEl6
 
 
     genElectives = {GenEd1, GenEd2, GenEd3, GenEd4, GenEd5, GenEd6, GenEd7, GenEd8, GenEd9, GenEd10};
     nodeLabs = {foundatEngL, phys1L, phys2L, cda2L, cda3L };
+
+    baseSchedule = {
+        {GenEd1, calc1, foundatEng, foundatEngL, comp1},
+        {phys1, phys1L, calc2, cop1, comp2},
+        {phys2, phys2L, cda1, cop2, discStruct},
+        {cda2, cda2L, cop3, GenEd2, GenEd3},
+        {ProbNStats, GenEd4, GenEd5},
+        {linSys, SoftEl1, cda3, cda3L, GenEd6, GenEd7},
+        {SoftEl2, SoftEl3, cop4, CommEng, GenEd8},
+        {SoftEl4, SoftEl5, secCode, opSys, GenEd9},
+        {SoftEl6, softEng, ethics, GenEd10}
+    };
 }
 

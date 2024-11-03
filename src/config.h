@@ -10,6 +10,8 @@
 #include <utility>
 #include <cfloat>
 
+#include <numeric>
+
 //boost related
 #include <boost/config.hpp>
 #include <boost/graph/properties.hpp>

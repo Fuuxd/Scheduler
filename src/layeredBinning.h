@@ -57,9 +57,12 @@ node* findLab(const node& course, std::vector<node>& labs) {
     return nullptr; // Return nullptr if no match found
 }
 
-std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t creditsPerSemester, std::vector<node>& genElectives_, std::vector<node>& labs, std::vector<std::vector<node>> &layeredTopo_) {
+//vestige remains of g, unused and replaced with layeredtopo_.
+std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t creditsPerSemester_, bool takingSummer, uint8_t creditsPerSummer, uint8_t semestersBeforeSummer, std::vector<node>& genElectives_, std::vector<node>& labs, std::vector<std::vector<node>> &layeredTopo_, uint8_t creditsAlreadyTaken = 0) {
 
     std::vector<std::vector<node>> layeredTopo = layeredTopo_;
+
+    uint8_t creditsPerSemester = creditsPerSemester_;
 
     std::vector<node> genElectives = genElectives_;
     //debug prints
@@ -72,7 +75,6 @@ std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t cred
     //    }
     //    std::cout << std::endl;
     //}
-
     //std::cout << std::endl << std::endl;
 
     uint16_t pushCounter = 0; // Counter for tracking course pushes back into the layer
@@ -83,6 +85,7 @@ std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t cred
     semesterVector currSemester(creditsPerSemester);
 
     uint8_t totalCredits = 0;
+    totalCredits += creditsAlreadyTaken;
     // Iterate over layers
     for (size_t i = 0; i < layeredTopo.size(); i++) {
 
@@ -92,27 +95,30 @@ std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t cred
             //std::cout << "Depth 3. adding to currSem" << std::endl;
 
             // If non-elective credits are met, fill with genElectives
-            if (currSemester.credits >= currSemester.nonElectiveCredits) { //if important credits full or semester too difficult already, fine tune later
-                while (!genElectives.empty() && currSemester.credits < creditsPerSemester) {
-
-                    //std::cout << "Depth 4. filling with electives" << std::endl;
-
-                    currSemester.courses.push_back(genElectives.back());
-                    currSemester.credits += genElectives.back().sections[0].credits;  // Assuming one section for simplicity
-                    totalCredits += genElectives.back().sections[0].credits; 
-                    currSemester.difficulty += genElectives.back().sections[0].difficulty;  // Assuming one section for simplicity
-                    genElectives.pop_back();
-                }
-            }
+            //if (currSemester.credits >= currSemester.nonElectiveCredits) { //if important credits full or semester too difficult already, fine tune later
+            //    while (!genElectives.empty() && currSemester.credits < creditsPerSemester) {
+            //        //std::cout << "Depth 4. filling with electives" << std::endl;
+            //        currSemester.courses.push_back(genElectives.back());
+            //        currSemester.credits += genElectives.back().getSection().credits;  // Assuming one section for simplicity
+            //        totalCredits += genElectives.back().getSection().credits; 
+            //        currSemester.difficulty += genElectives.back().getSection().difficulty;  // Assuming one section for simplicity
+            //        genElectives.pop_back();
+            //    }
+            //}
 
             // Check if semester is full
             if (currSemester.credits >= creditsPerSemester) {
                 binnedSchedule.push_back(currSemester);
-                currSemester = semesterVector(creditsPerSemester);
+
+                if(takingSummer && binnedSchedule.size() == semestersBeforeSummer){
+                    currSemester = semesterVector(creditsPerSummer);
+                    creditsPerSemester = creditsPerSummer;
+                }else{
+                    currSemester = semesterVector(creditsPerSemester);
+                    creditsPerSemester = creditsPerSemester_;
+                }
+                
             }
-
-            
-
             
             if(layeredTopo[i][j].credsNeeded > totalCredits){
                 //std::cout << "pushing further layeredTopo[" << i << "][" << j << "]." << layeredTopo[i][j].getName() << std::endl;
@@ -139,14 +145,14 @@ std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t cred
 
             // Add the current node from layeredTopo to the semester
 
-            if( currSemester.credits + layeredTopo[i][j].sections[0].credits <= creditsPerSemester ){
+            if( currSemester.credits + layeredTopo[i][j].getSection().credits <= creditsPerSemester ){
                 currSemester.courses.push_back(layeredTopo[i][j]);
-                totalCredits += layeredTopo[i][j].sections[0].credits;
+                totalCredits += layeredTopo[i][j].getSection().credits;
 
                 if (!layeredTopo[i][j].sections.empty()) {
                     // Add the credits from the first section
-                    currSemester.credits += layeredTopo[i][j].sections[0].credits;
-                    currSemester.difficulty += layeredTopo[i][j].sections[0].difficulty;
+                    currSemester.credits += layeredTopo[i][j].getSection().credits;
+                    currSemester.difficulty += layeredTopo[i][j].getSection().difficulty;
                 } else {
                     std::cerr << "No sections available for node in layeredTopo[" << i << "][" << j << "]." << std::endl;
                 }
@@ -155,7 +161,7 @@ std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t cred
                     node* labFound = findLab(layeredTopo[i][j], labs);
                     if(labFound){
                         currSemester.courses.push_back(*labFound);
-                        currSemester.credits += labFound->sections[0].credits;
+                        currSemester.credits += labFound->getSection().credits;
                     }else{
                         std::cout<< "NO lab found for" << layeredTopo[i][j].getName();
                     }
@@ -164,7 +170,13 @@ std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t cred
 
             else {
                 binnedSchedule.push_back(currSemester);
-                currSemester = semesterVector(creditsPerSemester);
+                if(takingSummer && binnedSchedule.size() == semestersBeforeSummer){
+                    currSemester = semesterVector(creditsPerSummer);
+                    creditsPerSemester = creditsPerSummer;
+                }else{
+                    currSemester = semesterVector(creditsPerSemester);
+                    creditsPerSemester = creditsPerSemester_;
+                }
                 currSemester.courses.push_back(layeredTopo[i][j]);
             }
 
@@ -177,16 +189,26 @@ std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t cred
 
         //If we get to the end of layer but currSemester not full, fill with electives
 
-        if(currSemester.credits < creditsPerSemester && creditsPerSemester-1 != currSemester.credits){
-            while (!genElectives.empty() && currSemester.credits < creditsPerSemester) {
+        if(!currSemester.courses.empty()){
+            while (!genElectives.empty() && currSemester.credits + genElectives.back().getSection().credits <= creditsPerSemester) {
 
                 //std::cout << "Depth 4. filling with electives" << std::endl;
 
                 currSemester.courses.push_back(genElectives.back());
-                currSemester.credits += genElectives.back().sections[0].credits;  // Assuming one section for simplicity
-                totalCredits += genElectives.back().sections[0].credits; 
-                currSemester.difficulty += genElectives.back().sections[0].difficulty;  // Assuming one section for simplicity
+                currSemester.credits += genElectives.back().getSection().credits;  // Assuming one section for simplicity
+                totalCredits += genElectives.back().getSection().credits; 
+                currSemester.difficulty += genElectives.back().getSection().difficulty;  // Assuming one section for simplicity
                 genElectives.pop_back();
+            }
+
+            binnedSchedule.push_back(currSemester);
+
+            if(takingSummer && binnedSchedule.size() == semestersBeforeSummer){
+                currSemester = semesterVector(creditsPerSummer);
+                creditsPerSemester = creditsPerSummer;
+            }else{
+                currSemester = semesterVector(creditsPerSemester);
+                creditsPerSemester = creditsPerSemester_;
             }
         }
 
@@ -194,20 +216,19 @@ std::vector<semesterVector> layeredBinning(directedGraphCourses& g, uint8_t cred
 
     // Add final semester left to schedule
         
-
     binnedSchedule.push_back(currSemester);
     
 
     return binnedSchedule;
 }
 
-std::vector<semesterVector> layeredBinningFirst(directedGraphCourses& g, uint8_t creditsPerSemester, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken) {
+std::vector<semesterVector> layeredBinningFirst(directedGraphCourses& g, uint8_t creditsPerSemester, bool takingSummer, uint8_t creditsPerSummer, uint8_t semestersBeforeSummer, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken) {
     std::vector<std::vector<node>> layeredTopo = layeredTopoSort(g, coursesTaken);
 
-    return layeredBinning(g, creditsPerSemester, genElectives, labs, layeredTopo);
+    return layeredBinning(g, creditsPerSemester, takingSummer, creditsPerSummer, semestersBeforeSummer, genElectives, labs, layeredTopo);
 }
 
-bool nextPermutationIndices(std::vector<std::vector<size_t>>& indices, const std::vector<std::vector<node>>& vecOfVecs) {
+bool nextPermutationIndices(std::vector<std::vector<size_t>>& indices) {
     for (size_t i = 0; i < indices.size(); ++i) {
         if (std::next_permutation(indices[i].begin(), indices[i].end())) {
             return true;
@@ -218,8 +239,8 @@ bool nextPermutationIndices(std::vector<std::vector<size_t>>& indices, const std
     return false;
 }
 
-bool nextPermutationIndicesBackwards(std::vector<std::vector<size_t>>& indices, const std::vector<std::vector<node>>& vecOfVecs) {
-    for (size_t i = vecOfVecs.size(); i-- > 0;) {
+bool nextPermutationIndicesBackwards(std::vector<std::vector<size_t>>& indices) {
+    for (size_t i = indices.size(); i-- > 0;) {
         if (std::next_permutation(indices[i].begin(), indices[i].end())) {
             return true;
         } else {
@@ -285,7 +306,7 @@ std::vector<std::vector<T>> generatePermutation(const std::vector<std::vector<T>
 }
 
 
-std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8_t creditsPerSemester, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken, uint iterationLimit = 100000){
+std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8_t creditsPerSemester, bool takingSummer, uint8_t creditsPerSummer, uint8_t semestersBeforeSummer, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken, uint iterationLimit = 100000){
 
     std::vector<semesterVector> schedule;
 
@@ -328,7 +349,7 @@ std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8
 
 
         // Call your getComplexity() or any other method on the current permutation
-        schedule = layeredBinning(g, creditsPerSemester, genElectives, labs, permutedTopo);
+        schedule = layeredBinning(g, creditsPerSemester, takingSummer, creditsPerSummer, semestersBeforeSummer, genElectives, labs, permutedTopo);
         complexityCompare = getComplexity( &schedule);
         iterationLimit--;
 
@@ -341,7 +362,7 @@ std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8
             break;
         }
 
-    } while (nextPermutationIndices(indices, topoLayers));
+    } while (nextPermutationIndices(indices));
 
     if(minValue == FLT_MAX){
         std::cerr << "failed to find easiest schedule";
@@ -385,12 +406,12 @@ std::vector<semesterVector> layeredBinningPermute(directedGraphCourses& g, uint8
     //    std::cout << std::endl;
     //}
 
-    return layeredBinning(g, creditsPerSemester, genElectives, labs, permutedTopo);
+    return layeredBinning(g, creditsPerSemester, takingSummer, creditsPerSummer, semestersBeforeSummer, genElectives, labs, permutedTopo);
 }
 
-//Wrapper function to prevent the problems from calling layeredTopoSort multiple times
+//Wrapper function to prevent the problems from calling layeredTopoSort multiple times (prevents copying Graph multiple times)
 //MAIN FUNCTION IS TO POPULATE THE INDEXES 
-void binningPermuteUtil(directedGraphCourses& g, uint8_t creditsPerSemester, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken, std::vector<std::vector<node>> topoLayers, std::vector<bool> toPermute, std::vector<std::vector<size_t>>* steppedIndexes, uint iterationLimit = 100000){
+void binningPermuteUtil(directedGraphCourses& g, uint8_t creditsPerSemester, bool takingSummer, uint8_t creditsPerSummer, uint8_t semestersBeforeSummer, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken, std::vector<std::vector<node>> topoLayers, std::vector<bool> toPermute, std::vector<std::vector<size_t>>* steppedIndexes, uint iterationLimit = 100000, uint8_t creditsAlreadyTaken = 0){
 
     std::vector<semesterVector> schedule;
 
@@ -404,7 +425,6 @@ void binningPermuteUtil(directedGraphCourses& g, uint8_t creditsPerSemester, std
     //    std::cout << std::endl;
     //}
     
-
     std::vector<std::vector<size_t>> indices;
     std::vector<std::vector<size_t>> currentlyPermutingIndices;
 
@@ -452,7 +472,7 @@ void binningPermuteUtil(directedGraphCourses& g, uint8_t creditsPerSemester, std
 
 
         // Call your getComplexity() or any other method on the current permutation
-        schedule = layeredBinning(g, creditsPerSemester, genElectives, labs, permutedTopo);
+        schedule = layeredBinning(g, creditsPerSemester, takingSummer, creditsPerSummer, semestersBeforeSummer, genElectives, labs, permutedTopo, creditsAlreadyTaken);
         complexityCompare = getComplexity( &schedule);
         iterationLimit--;
 
@@ -466,7 +486,7 @@ void binningPermuteUtil(directedGraphCourses& g, uint8_t creditsPerSemester, std
             break;
         }
 
-    } while (nextPermutationIndices(currentlyPermutingIndices, topoLayers));
+    } while (nextPermutationIndices(currentlyPermutingIndices));
 
     if(minValue == FLT_MAX){
         std::cerr << "failed to find easiest schedule";
@@ -511,14 +531,40 @@ void binningPermuteUtil(directedGraphCourses& g, uint8_t creditsPerSemester, std
 }
 
 
-std::vector<semesterVector> stepLayeredBinningPermute(directedGraphCourses& g, uint8_t creditsPerSemester, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken, uint iterationLimit = 100000, size_t windowSize = 2){
+std::vector<semesterVector> stepLayeredBinningPermute(directedGraphCourses& g, uint8_t creditsPerSemester, bool takingSummer, uint8_t creditsPerSummer, uint8_t semestersBeforeSummer, std::vector<node>& genElectives, std::vector<node>& labs, std::set<Vertex> coursesTaken, uint iterationLimit = 100000, size_t windowSize = 2){
 
     std::vector<semesterVector> schedule;
-    
-    std::vector<std::vector<node>> topoLayers = layeredTopoSort(g, coursesTaken);
 
+    uint8_t creditsAlreadyTaken = 0;
+    for (Vertex v : coursesTaken) {
+        node& nodeData = boost::get(boost::vertex_name, g, v);
+        creditsAlreadyTaken += nodeData.getSection().credits;
+    }
+    
+    std::vector<std::vector<node>> topoLayers = pyramidalLayeredTopoSort(g, coursesTaken);
+
+    std::cout << "Pyramidal Layered toposort out:" << std::endl;
+    for (size_t i = 0; i < topoLayers.size(); ++i) {
+        std::cout << "Layer " << i + 1 << ":" << std::endl;
+        for (const node& n : topoLayers[i]) {
+            // Print CRS and Name of each node in the layer
+            std::cout << n.getCRS() << " " << n.getName() << "    ";
+        }
+        std::cout << std::endl;
+    }
+
+    while(windowSize > topoLayers.size()){
+        if (windowSize == 1){
+            break;
+        }
+        windowSize--;
+    }
 
     std::vector<std::vector<size_t>> steppedIndexes;
+
+    if(topoLayers.empty()){
+        std::cout << "Layered Toposort is cooked" << std::endl;
+    }
 
     for(size_t i = 0; i < topoLayers.size()-windowSize+1; i++){
         std::vector<std::vector<node>> layerWindow;
@@ -532,7 +578,7 @@ std::vector<semesterVector> stepLayeredBinningPermute(directedGraphCourses& g, u
         }
 
         //below populates indices
-        binningPermuteUtil(g, creditsPerSemester, genElectives, labs, coursesTaken, topoLayers, toPermute, &steppedIndexes, iterationLimit);
+        binningPermuteUtil(g, creditsPerSemester, takingSummer, creditsPerSummer, semestersBeforeSummer, genElectives, labs, coursesTaken, topoLayers, toPermute, &steppedIndexes, iterationLimit, creditsAlreadyTaken);
 
     }
 
@@ -543,9 +589,7 @@ std::vector<semesterVector> stepLayeredBinningPermute(directedGraphCourses& g, u
         }
     }
 
-    printVectorOfVectors( steppedIndexes);
-
-    return layeredBinning(g, creditsPerSemester, genElectives, labs, permutedTopo);
+    return layeredBinning(g, creditsPerSemester, takingSummer, creditsPerSummer, semestersBeforeSummer, genElectives, labs, permutedTopo);
 
 }
 

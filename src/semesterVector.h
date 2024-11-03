@@ -2,18 +2,19 @@
 
 #include "config.h"
 #include "node.h"
+#include "hardcodeGraph.cpp"
 
 class semesterVector
 {
 public:
     std::vector<node> courses;
     uint8_t credits;
-    uint8_t difficulty;
+    uint16_t difficulty;
     uint8_t nonElectiveCredits;
 
     semesterVector() : credits(0), difficulty(0), nonElectiveCredits(0) {}
-    semesterVector(std::vector<node> courses_, uint8_t credits_, uint8_t difficulty_): courses(courses_), credits(credits_), nonElectiveCredits((credits_ * 21)/25), difficulty(difficulty_) {} //ARBITRARY IMPORTANCE OF ELECTIVES, determining here what proportion of "important courses" to take
-    semesterVector(uint8_t maxCredits_): credits(0), nonElectiveCredits((maxCredits_ * 21)/25) {}
+    semesterVector(std::vector<node> courses_, uint8_t credits_, uint16_t difficulty_): courses(courses_), credits(credits_), nonElectiveCredits((credits_ * 21)/25), difficulty(difficulty_) {} //ARBITRARY IMPORTANCE OF ELECTIVES, determining here what proportion of "important courses" to take
+    semesterVector(uint8_t maxCredits_): credits(0), nonElectiveCredits((maxCredits_ * 21)/25), difficulty(0) {}
     ~semesterVector() = default;
 
     void printCourses() const{
@@ -22,6 +23,10 @@ public:
             std::cout << std::to_string(courses[i].getCRS()) + " " + courses[i].getName() << "    ";  
         }
     }
+
+    void printDifficulty() const{
+        std::cout << std::to_string(difficulty) + " " + std::to_string(credits) + " \n";
+    }
 };
 
 
@@ -29,18 +34,19 @@ public:
 void printSchedule(const std::vector<semesterVector>* schedule) {
     for (size_t i = 0; i < schedule->size(); i++) {
         (*schedule)[i].printCourses();
-        std::cout << std::endl;
+        (*schedule)[i].printDifficulty();
+
     }
     std::cout << std::endl;
 }
 
 float getComplexity(std::vector<semesterVector>* schedule){
-    uint8_t maxCredDiffic = INT8_MIN;
-    uint8_t minCredDiffic = INT8_MAX;
+    uint16_t maxCredDiffic = INT8_MIN;
+    uint16_t minCredDiffic = INT8_MAX;
 
     for (size_t i = 0; i < schedule->size(); i++) {
 
-        uint8_t CredDiff = (*schedule)[i].credits + (*schedule)[i].difficulty;
+        uint16_t CredDiff = (*schedule)[i].credits + (*schedule)[i].difficulty;
         if(CredDiff > maxCredDiffic){
             maxCredDiffic = CredDiff;
         }
@@ -49,7 +55,7 @@ float getComplexity(std::vector<semesterVector>* schedule){
         }
     }
 
-    int16_t difference = maxCredDiffic - minCredDiffic;
+    int32_t difference = maxCredDiffic - minCredDiffic;
 
     if( difference < 0){
         //std::cerr << " error obtaining Complexity of a schedule. check for possible empty schedules";
@@ -58,3 +64,36 @@ float getComplexity(std::vector<semesterVector>* schedule){
 
     return  ((difference) + (schedule->size() * 2.5) + (maxCredDiffic * 0.6));
 }
+
+//float getComplexity(std::vector<semesterVector>* schedule) {
+//    // ASSUMES baseSchedule is already hardCoded
+//    float totalDistance = 0.0f;
+//
+//    // For each semester in input schedule
+//    for (size_t i = 0; i < schedule->size(); i++) {
+//        // For each course in current semester
+//        for (const auto& course : (*schedule)[i].courses) {
+//            bool found = false;
+//            
+//            // Search for this course in base schedule
+//            for (size_t j = 0; j < baseSchedule.size(); j++) {
+//                for (const auto& baseNode : baseSchedule[j]) {
+//                    if (baseNode.getCRS() == course.getCRS()) {
+//                        // Add distance between semester positions
+//                        totalDistance += abs(static_cast<float>(i) - static_cast<float>(j));
+//                        found = true;
+//                        break;
+//                    }
+//                }
+//                if (found) break;
+//            }
+//            
+//            // If course wasn't found, add maximum penalty
+//            if (!found) {
+//                totalDistance += baseSchedule.size();
+//            }
+//        }
+//    }
+//    
+//    return totalDistance;
+//}
