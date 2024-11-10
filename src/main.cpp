@@ -8,9 +8,7 @@
 #include "config.h"
 #include "node.h"
 #include "semesterVector.h"
-#include "toposorts.h"
-#include "layeredBinning.h"
-#include "bruteForce.h"
+#include "holePuncher.cpp"
 
 #include "hardcodeGraph.cpp"
 //#include "hardcodeGraphSmall.cpp"
@@ -52,10 +50,8 @@ int main(){
     uint8_t semestersBeforeSummer = 4;
 
     //binnedSchedule = layeredBinningPermute(G, creditsPerSemester, genElectives, nodeLabs, emptySet, 100000);
-    binnedSchedule = stepLayeredBinningPermute(G, creditsPerSemester, takingSummer, creditsPerSummer, semestersBeforeSummer, genElectives, nodeLabs, emptySet, 1000000, 3);
+    std::vector<semesterVecVertex> fittedSchedule = scheduleFit(G, &emptySet);
 
-    std::cout << "Semester plan for " << std::to_string(creditsPerSemester) << " credits per semester (" << std::endl;
-
-    printSchedule(&binnedSchedule);
+    printScheduleVertexes(fittedSchedule);
     
 }

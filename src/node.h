@@ -65,7 +65,13 @@ public:
     bool operator<(const node& other) const {
         return this->CRS < other.CRS;  // Compare based on CRS
     }
+
 };
+
+std::ostream& operator<<(std::ostream& os, const node& n) {
+    os << std::to_string(n.CRS ) << " " << n.courseName << "    ";
+    return os;
+}
 
 // Custom vertex writer to output courseName for Graphviz
 struct vertex_writer {

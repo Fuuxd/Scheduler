@@ -6,9 +6,7 @@
 #include "config.h"
 #include "node.h"
 #include "semesterVector.h"
-#include "toposorts.h"
-#include "layeredBinning.h"
-#include "bruteForce.h"
+#include "holePuncher.cpp"
 
 #include "hardcodeGraph.cpp"
 //#include "hardcodeGraphSmall.cpp"
@@ -62,12 +60,8 @@ int main(int argc, char* argv[]){
     }
 
 
-    uint8_t creditsPerSemester = 15;
+    std::vector<semesterVecVertex> fittedSchedule = scheduleFit(G, &vertexSet);
 
-    std::vector<semesterVector> binnedSchedule = stepLayeredBinningPermute(G, creditsPerSemester, true, 9, 4, genElectives, nodeLabs, vertexSet, 1000000, 3);
-    
-    std::cout << "Semester plan for " << std::to_string(creditsPerSemester) << " credits per semester (" << std::endl;
-
-    printSchedule(&binnedSchedule);
+    printScheduleVertexes(fittedSchedule);
     
 }

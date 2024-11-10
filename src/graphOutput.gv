@@ -27,6 +27,16 @@ digraph G {
 25[label="7777", shape="square"];
 26[label="7777", shape="square"];
 27[label="7777", shape="square"];
+28[label="2999", shape="square"];
+29[label="2999", shape="square"];
+30[label="2999", shape="square"];
+31[label="2999", shape="square"];
+32[label="2999", shape="square"];
+33[label="2999", shape="square"];
+34[label="2999", shape="square"];
+35[label="2999", shape="square"];
+36[label="2999", shape="square"];
+37[label="2999", shape="square"];
 0->1 ;
 2->3 ;
 0->5 ;
