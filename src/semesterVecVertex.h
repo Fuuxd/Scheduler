@@ -21,11 +21,15 @@ public:
 
 void printScheduleVertexes(std::vector<semesterVecVertex> &scheduleToPrint){
     std::cout<<"Schedule plan:\n";
+    size_t semNum = 1;
     for(auto sem : scheduleToPrint){
+        std::cout<< "Semester " << std::to_string(semNum) << ":\n";
         for(auto v : sem.courses){
             node& nodeData = boost::get(boost::vertex_name, G, v);
-            std::cout << std::to_string(nodeData.getCRS()) << " " << nodeData.getName() << "    ";
+            std::cout << std::to_string(nodeData.getCRS()) << " " << nodeData.getName() << "\n";
         }
-        std::cout << std::endl;
+        std::cout << std::to_string(sem.credits) ;
+        std::cout << std::endl << std::endl;
+        semNum++;
     }
 }

@@ -18,34 +18,25 @@ void printVectorOfVectors(const std::vector<std::vector<T>>& vec) {
 }
 
 
-void removeCompletedCourses(std::vector<std::vector<Vertex>>& baseSchedule, const std::set<Vertex>* coursesTaken) {
+void removeCompletedCourses(const std::set<Vertex>* coursesTaken) {
     // Check for null pointer
     if (!coursesTaken) {
         return;
     }
 
     // For each semester in the schedule
-    for(std::vector<Vertex> bin : baseSchedule){
+    for(auto& bin : baseSchedule) {  // Use reference to modify original vector
         // Iterate through the courses in the bin
         auto it = bin.begin();
         while (it != bin.end()) {
-            node& nodeData = boost::get(boost::vertex_name, G, *it);
+            // Simply check if the vertex index exists in coursesTaken
+            auto found = coursesTaken->find(*it);
             
-            bool courseCompleted = false;
-            for (const Vertex& v2 : *coursesTaken) {
-                node& nodeData2 = boost::get(boost::vertex_name, G, v2);
-                
-                if (nodeData2.getCRS() == nodeData.getCRS()) {
-                    courseCompleted = true;
-                    break;
-                }
-            }
-
-            if (courseCompleted) {
+            if (found != coursesTaken->end()) {
                 // Remove the completed course from the bin
                 it = bin.erase(it);
             } else {
-                ++it; // Only increment if we don't erase
+                ++it;
             }
         }
     }
@@ -63,10 +54,12 @@ void removeCompletedCourses(std::vector<std::vector<Vertex>>& baseSchedule, cons
     );
 }
 
-void optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCourses& G) {
+bool optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCourses& G) {
     if (schedule.size() <= 1) {
-        return;  // Nothing to optimize
+        return false;  // Nothing to optimize
     }
+
+    bool didSomething = false;
 
     // Iterate through semesters from last to second
     for (int currentSemIndex = schedule.size() - 1; currentSemIndex > 0; --currentSemIndex) {
@@ -75,7 +68,6 @@ void optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCou
         
         // Create a vector to mark vertices that should stay in current semester
         std::vector<bool> shouldStay(currentSemester.courses.size(), false);
-        // Create a vector to store credits of each course
         std::vector<uint8_t> courseCredits(currentSemester.courses.size());
 
         // For each vertex in current semester
@@ -86,9 +78,19 @@ void optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCou
             node& currentNodeData = boost::get(boost::vertex_name, G, currentVertex);
             courseCredits[i] = currentNodeData.getSection().credits;
             
-            // Check if any vertex in previous semester depends on this vertex
+            // Check if this vertex depends on any vertex in the previous semester
             for (const auto& prevVertex : previousSemester.courses) {
-                // Get incoming edges to the previous semester vertex
+                // Check outgoing edges from previous semester vertex to current vertex
+                boost::graph_traits<directedGraphCourses>::out_edge_iterator eo, eo_end;
+                for (boost::tie(eo, eo_end) = boost::out_edges(prevVertex, G); eo != eo_end; ++eo) {
+                    if (boost::target(*eo, G) == currentVertex) {
+                        shouldStay[i] = true;
+                        break;
+                    }
+                }
+                if (shouldStay[i]) break;
+
+                // Also check if any vertex in previous semester depends on this vertex
                 boost::graph_traits<directedGraphCourses>::in_edge_iterator ei, ei_end;
                 for (boost::tie(ei, ei_end) = boost::in_edges(prevVertex, G); ei != ei_end; ++ei) {
                     if (boost::source(*ei, G) == currentVertex) {
@@ -97,6 +99,10 @@ void optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCou
                     }
                 }
                 if (shouldStay[i]) break;
+
+                if( (previousSemester.credits + currentNodeData.getSection().credits) > previousSemester.maxCredits){
+                    shouldStay[i] = true;
+                }
             }
         }
 
@@ -127,6 +133,7 @@ void optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCou
                     newPreviousSemester.courses.push_back(currentVertex);
                     newPreviousSemester.credits += courseCredit;
                     newPreviousSemester.difficulty += courseDifficulty;
+                    didSomething = true;  // Mark that we moved a course
                 } else {
                     // Keep in current semester if moving up would exceed credit limit
                     newCurrentSemester.courses.push_back(currentVertex);
@@ -143,8 +150,6 @@ void optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCou
 
     // Create a new schedule without empty semesters
     std::vector<semesterVecVertex> newSchedule;
-    
-    // Only add non-empty semesters to the new schedule
     for (const auto& semester : schedule) {
         if (!semester.courses.empty()) {
             newSchedule.push_back(semester);
@@ -153,14 +158,124 @@ void optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCou
 
     // Update the schedule
     schedule = newSchedule;
+
+    return didSomething;
 }
+
+std::vector<semesterVecVertex> minimizeScheduleHeight(std::vector<semesterVecVertex>& initialSchedule, directedGraphCourses& G) {
+    std::vector<semesterVecVertex> bestSchedule = initialSchedule;
+    bool madeChanges;
+    
+    do {
+        madeChanges = false;
+        
+        // Try to optimize the current schedule
+        madeChanges = optimizeSchedule(bestSchedule, G);
+        
+        // If no changes were made by optimizeSchedule, try to compress further
+        if (!madeChanges) {
+            // Check each semester from bottom to top if courses can move up multiple semesters
+            for (int currentSemIndex = bestSchedule.size() - 1; currentSemIndex > 0; --currentSemIndex) {
+                auto& currentSem = bestSchedule[currentSemIndex];
+                
+                // Try to move each course up as far as possible
+                auto courseIt = currentSem.courses.begin();
+                while (courseIt != currentSem.courses.end()) {
+                    const auto& currentCourse = *courseIt;
+                    node& courseNode = boost::get(boost::vertex_name, G, currentCourse);
+                    
+                    // Skip if course number is 4250
+                    if (courseNode.getCRS() == 4250) {
+                        ++courseIt;
+                        continue;
+                    }
+                    
+                    // Find the highest semester this course can move to
+                    int targetSemester = -1;
+                    for (int testSem = 0; testSem < currentSemIndex; ++testSem) {
+                        bool canMoveTo = true;
+                        
+                        // Check prerequisites
+                        for (int checkSem = testSem; checkSem < currentSemIndex; ++checkSem) {
+                            for (const auto& checkCourse : bestSchedule[checkSem].courses) {
+                                // Check if current course depends on any course in between
+                                boost::graph_traits<directedGraphCourses>::out_edge_iterator eo, eo_end;
+                                for (boost::tie(eo, eo_end) = boost::out_edges(checkCourse, G); eo != eo_end; ++eo) {
+                                    if (boost::target(*eo, G) == currentCourse) {
+                                        canMoveTo = false;
+                                        break;
+                                    }
+                                }
+                                
+                                // Check if any course depends on current course
+                                boost::graph_traits<directedGraphCourses>::in_edge_iterator ei, ei_end;
+                                for (boost::tie(ei, ei_end) = boost::in_edges(checkCourse, G); ei != ei_end; ++ei) {
+                                    if (boost::source(*ei, G) == currentCourse) {
+                                        canMoveTo = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!canMoveTo) break;
+                        }
+                        
+                        // Check credit limit
+                        uint8_t courseCredits = courseNode.getSection().credits;
+                        if (bestSchedule[testSem].credits + courseCredits > bestSchedule[testSem].maxCredits) {
+                            canMoveTo = false;
+                        }
+                        
+                        if (canMoveTo) {
+                            targetSemester = testSem;
+                            break;
+                        }
+                    }
+                    
+                    // If we found a valid target semester, move the course
+                    if (targetSemester != -1) {
+                        uint8_t courseCredits = courseNode.getSection().credits;
+                        uint16_t courseDifficulty = courseNode.getSection().difficulty;
+                        
+                        // Add to target semester
+                        bestSchedule[targetSemester].courses.push_back(currentCourse);
+                        bestSchedule[targetSemester].credits += courseCredits;
+                        bestSchedule[targetSemester].difficulty += courseDifficulty;
+                        
+                        // Remove from current semester
+                        currentSem.credits -= courseCredits;
+                        currentSem.difficulty -= courseDifficulty;
+                        courseIt = currentSem.courses.erase(courseIt);
+                        
+                        madeChanges = true;
+                    } else {
+                        ++courseIt;
+                    }
+                }
+            }
+        }
+        
+        // Remove empty semesters
+        bestSchedule.erase(
+            std::remove_if(
+                bestSchedule.begin(),
+                bestSchedule.end(),
+                [](const semesterVecVertex& semester) { return semester.courses.empty(); }
+            ),
+            bestSchedule.end()
+        );
+        
+    } while (madeChanges);
+    
+    return bestSchedule;
+}
+
 
 std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Vertex>* coursesTaken) {
 
     directedGraphCourses graphCopy = g;
     std::vector<std::vector<Vertex>> layers;
     
-    removeCompletedCourses(baseSchedule, coursesTaken);
+    removeCompletedCourses(coursesTaken);
 
     std::vector<semesterVecVertex> schedule;
     for (size_t semesterIndex = 0; semesterIndex < baseSchedule.size(); ++semesterIndex) {
@@ -181,13 +296,11 @@ std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Ver
         }
         
         if (semesterIndex == 4) { // Check if we're at the fifth index (zero-based indexing)
-            schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty, 8);
+            schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty, 9);
             continue;
         }
         schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty);
     }
 
-    optimizeSchedule(schedule, g);
-
-    return schedule;
+    return minimizeScheduleHeight(schedule, g);
 }
