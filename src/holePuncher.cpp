@@ -42,16 +42,16 @@ void removeCompletedCourses(const std::set<Vertex>* coursesTaken) {
     }
 
     // Remove any empty semesters
-    baseSchedule.erase(
-        std::remove_if(
-            baseSchedule.begin(),
-            baseSchedule.end(),
-            [](const std::vector<Vertex>& semester) {
-                return semester.empty();
-            }
-        ),
-        baseSchedule.end()
-    );
+    //baseSchedule.erase(
+    //    std::remove_if(
+    //        baseSchedule.begin(),
+    //        baseSchedule.end(),
+    //        [](const std::vector<Vertex>& semester) {
+    //            return semester.empty();
+    //        }
+    //    ),
+    //    baseSchedule.end()
+    //);
 }
 
 bool optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCourses& G) {
@@ -274,6 +274,8 @@ std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Ver
 
     directedGraphCourses graphCopy = g;
     std::vector<std::vector<Vertex>> layers;
+
+    //CHANGE REMOVECOMPLETED COURSES TO TAKE THE SCHEDULE BELOW AND REMOVE COURSES FROM IT INSTEAD (KEEPS SUMMER)
     
     removeCompletedCourses(coursesTaken);
 
@@ -295,12 +297,14 @@ std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Ver
             }
         }
         
-        if (semesterIndex == 4) { // Check if we're at the fifth index (zero-based indexing)
+        if (semesterIndex == 1) { // Check if we're at the fifth index (zero-based indexing)
             schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty, 9);
             continue;
         }
         schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty);
     }
+
+    //minimizeScheduleHeight(schedule, g)
 
     return minimizeScheduleHeight(schedule, g);
 }
