@@ -1,51 +1,69 @@
-document.getElementById('graph').addEventListener('load', function() {
-    // Access the inner document of the loaded SVG
-    var svgDoc = this.contentDocument; // Access the SVG document inside the <object>
-    let checkedNodes = new Set(); // To keep track of checked nodes
+function loadCheckboxList() {
+    fetch('checkboxList.html')
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('checkboxContainer').innerHTML = html;
 
-    // Select all nodes (g.node elements) from the loaded SVG document
-    svgDoc.querySelectorAll('g.node').forEach(function(node) {
-        // Add click event listener to each node
-        node.addEventListener('click', function() {
-            let polygon = node.querySelector('polygon'); // Get the polygon inside the node group
-            let title = node.querySelector('title') ? node.querySelector('title').textContent : null; // Get the title text
-            if (polygon) {
-                if (checkedNodes.has(title)) {
-                    // If already checked, uncheck by reverting color and removing from the set
-                    polygon.setAttribute('fill', 'white'); // Revert to original color (empty string)
-                    checkedNodes.delete(title); // Remove from the set
-                } else {
-                    // Otherwise, check by changing color and adding to the set
-                    polygon.setAttribute('fill', 'red'); // Change to red on click
-                    checkedNodes.add(title); // Add the title to the set
-                }
-            }
-        });
-    });
+            // Add event listeners to dynamically loaded content
+            document.querySelectorAll('.checkbox').forEach(item => {
+                item.addEventListener('click', function () {
+                    const value = parseInt(this.getAttribute('data-value'), 10);
 
-    // Add functionality to submit button to list checked nodes
-    document.getElementById('submitBtn').addEventListener('click', function() {
-        let checkedList = Array.from(checkedNodes); // Convert the set to an array
+                    // Toggle the checked class and track selections
+                    if (this.classList.contains('checked')) {
+                        this.classList.remove('checked');
+                        checkedNodes.delete(value);
+                    } else {
+                        this.classList.add('checked');
+                        checkedNodes.add(value);
+                    }
+                });
+            });
+        })
+        .catch(error => console.error('Error loading checkbox list:', error));
+}
 
-        const nodeCount = checkedList.length;
-        console.log(checkedNodes);
 
-        if (nodeCount > 0) {
-            fetch('/calculate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ nodes: checkedList }) // Send the title list to the server
-            })
-            .then(response => response.text())
-            .then(result => {
-                // Display the result returned by the C++ program
-                document.getElementById('result').innerText = result; // Ensure you use 'result' not 'data'
-            })
-            .catch(error => console.error('Error:', error));
+const checkedNodes = new Set();
+
+// Add click event listeners to each checkbox text
+document.querySelectorAll('.checkbox').forEach(item => {
+    item.addEventListener('click', function () {
+        const value = parseInt(this.getAttribute('data-value'), 10);
+
+        // Toggle the checked class and track selections
+        if (this.classList.contains('checked')) {
+            this.classList.remove('checked');
+            checkedNodes.delete(value);
         } else {
-            console.log('Nothing picked. Nothing sent.');
+            this.classList.add('checked');
+            checkedNodes.add(value);
         }
     });
+});
+
+// Handle form submission
+document.getElementById('submitBtn').addEventListener('click', function () {
+    let checkedList = Array.from(checkedNodes); // Convert the set to an array
+
+    const nodeCount = checkedList.length;
+    console.log('Selected Values:', checkedNodes);
+
+    if (nodeCount > 0) {
+        fetch('/calculate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ nodes: checkedList }) // Send the values list to the server
+        })
+        .then(response => response.text())
+        .then(result => {
+            // Display the result returned by the server
+            document.getElementById('result').innerText = result;
+        })
+        .catch(error => console.error('Error:', error));
+    } else {
+        console.log('Nothing picked. Nothing sent.');
+    }
 });
