@@ -29,6 +29,11 @@ int main(int argc, char* argv[]){
         nodes.push_back(argv[i]);
     }
 
+    bool isTakingSummer = std::stoi(argv[argc - 2]) != 0; // If "1", it's true; else, false
+    int summerIndex = std::stoi(argv[argc - 1]); 
+
+
+
     hardcodeGraph();
 
     std::set<Vertex> vertexSet;
@@ -40,13 +45,11 @@ int main(int argc, char* argv[]){
         try {
             // Convert string index to integer
             size_t nodeIndex = std::stoul(nodeIndexStr);
-
             // Check if the index is valid
             if (nodeIndex >= boost::num_vertices(G)) {
                 std::cout << "Invalid index: " << nodeIndexStr << " (out of range)" << std::endl;
                 continue;  // Skip invalid indices
             }
-
             // Retrieve the vertex from the graph
             Vertex vertex = boost::vertex(nodeIndex, G);
             vertexSet.insert(vertex);
@@ -60,8 +63,16 @@ int main(int argc, char* argv[]){
     }
 
 
-    std::vector<semesterVecVertex> fittedSchedule = scheduleFit(G, &vertexSet);
+    std::vector<semesterVecVertex> fittedSchedule = scheduleFit(G, &vertexSet, 0, isTakingSummer, summerIndex);
 
     printScheduleVertexes(fittedSchedule);
+
+    for(int i = 0; i < 4; i++){
+        fittedSchedule = scheduleFit(G, &vertexSet, i, isTakingSummer, summerIndex);
+        if( isFullTime(G, &fittedSchedule)){
+            std::cout<<"Alternative: \n\n";
+            printScheduleVertexes(fittedSchedule);
+        }
+    }
     
 }

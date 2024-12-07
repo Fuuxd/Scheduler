@@ -15,13 +15,18 @@ app.use(express.static(__dirname));
 // Endpoint to handle node list submission
 app.post('/calculate', (req, res) => {
     const checkedNodes = req.body.nodes; // Get the list of checked nodes from the request
+    const takingSummer = req.body.takingSummer; // Get the takingSummer checkbox value
+    const summerIndex = req.body.summerIndex; // Get the summer semester index
 
     const nodeCount = checkedNodes.length;
 
-    if (nodeCount > 0) {
+    if (nodeCount > 0 || takingSummer) {
         const nodeList = checkedNodes.join(' '); // Create a space-separated string of node IDs
-        const command = `./scheduleCreator ${nodeCount} ${nodeList}`; // Assuming your C++ program takes node IDs as arguments
+
+        // Construct the command to execute the C++ program
+        const command = `./scheduleCreator ${nodeCount} ${nodeList} ${takingSummer ? 1 : 0} ${summerIndex ?? 4}`;
         console.log(command);
+
         // Execute the C++ program
         exec(command, (error, stdout, stderr) => {
             if (error) {
@@ -34,7 +39,7 @@ app.post('/calculate', (req, res) => {
             res.send(stdout);
         });
     } else {
-        res.status(400).send('No nodes were selected');
+        res.status(400).send('No nodes were selected and no summer semester specified');
     }
 });
 

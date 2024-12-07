@@ -33,6 +33,75 @@ int main(){
 
     system(command.c_str());
 
+    std::ofstream htmlFile("schedule.html");
+
+    if (!htmlFile) {
+        std::cerr << "Error: Could not open file for writing.\n";
+        return 1;
+    }
+
+    // Write the HTML header
+    htmlFile << "<!DOCTYPE html>\n"
+             << "<html lang=\"en\">\n"
+             << "<head>\n"
+             << "    <meta charset=\"UTF-8\">\n"
+             << "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+             << "    <title>Schedule</title>\n"
+             << "    <style>\n"
+             << "        .checkbox { cursor: pointer; display: block; margin: 5px 0; }\n"
+             << "        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }\n"
+             << "        .column { display: flex; flex-direction: column; }\n"
+             << "    </style>\n"
+             << "</head>\n"
+             << "<body>\n"
+             << "<h1>Schedule</h1>\n";
+
+    // Start the grid container
+    htmlFile << "<div class=\"grid-container\">\n";
+
+    size_t printSemNum = 1;
+    size_t midpoint = (baseSchedule.size()+1) / 2;
+
+    for (size_t i = 0; i < baseSchedule.size(); ++i) {
+        const auto& vector = baseSchedule[i];
+
+        // Open a new column if we reach the midpoint
+        if (i == midpoint) {
+            htmlFile << "</div>\n<div class=\"column\">\n";
+        } else if (i == 0) {
+            htmlFile << "<div class=\"column\">\n";
+        }
+
+        if (printSemNum == 5) {
+            htmlFile << "<h2>Summer</h2>\n";
+            ++printSemNum;
+        } else {
+            htmlFile << "<h2>Semester " << printSemNum++ << "</h2>\n";
+        }
+
+        for (const auto& v : vector) {
+            node& nodeData = boost::get(boost::vertex_name, G, v);
+
+            // Write the HTML span element for each vertex
+            htmlFile << "<span class=\"checkbox\" data-value=\"" 
+                     << v 
+                     << "\">" 
+                     << std::to_string(nodeData.getCRS()) 
+                     << " " 
+                     << nodeData.getName() 
+                     << "</span>\n";
+        }
+    }
+
+    // Close the final column and grid container
+    htmlFile << "</div>\n</div>\n";
+
+    // Write the HTML footer
+    htmlFile << "</body>\n</html>\n";
+
+    htmlFile.close();
+    std::cout << "Base Schedule HTML has been written to schedule.html.\n";
+
     std::vector<semesterVector> binnedSchedule;
 
     //binnedSchedule = layeredBinningFirst(G, creditsPerSemester, genElectives, nodeLabs);
@@ -52,6 +121,15 @@ int main(){
     //binnedSchedule = layeredBinningPermute(G, creditsPerSemester, genElectives, nodeLabs, emptySet, 100000);
     std::vector<semesterVecVertex> fittedSchedule = scheduleFit(G, &emptySet);
 
+    std::cout<<"OPTION 1: \n";
     printScheduleVertexes(fittedSchedule);
-    
+
+    std::cout<<"OPTION 2: \n";
+    fittedSchedule = scheduleFit(G, &emptySet, 1);
+
+    std::cout<<"OPTION 3: \n";
+    fittedSchedule = scheduleFit(G, &emptySet, 2);
+
+    std::cout<<"OPTION 4: \n";
+    fittedSchedule = scheduleFit(G, &emptySet, 3);
 }

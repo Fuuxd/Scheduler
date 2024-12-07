@@ -7,8 +7,14 @@
     <title>Graph</title>
 
     <style>
-        .clicked {
-            fill: #FF0000; /* Red fill color for clicked nodes */
+        .checkbox {
+            cursor: pointer;
+            display: block;
+            margin: 5px 0;
+        }
+        .checked {
+            font-weight: bold;
+            color: darkred;
         }
     </style>
 
@@ -16,12 +22,24 @@
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-    <p> Kairos Test</p>
-    <br><br>
-    <object data="graphConverted.svg" type="image/svg+xml" id="graph" width="600" height="400"></object>
-    <br>
-    <button id="submitBtn">Submit</button>
 
+
+    <h1>Select Items</h1>
+
+    <div id="checkboxContainer">
+        <!-- Checkbox list will be loaded here -->
+    </div>
+    <br>
+    <label for="takingSummer" class="checkbox">
+        <input type="checkbox" id="takingSummer"> Taking Summer
+    </label>
+    <label for="summerIndex">
+        <span>Summer Semester Number:</span>
+        <input type="number" id="summerIndex" min="1" placeholder="Enter semester number">
+    </label>
+    <br><br>
+    <button id="submitBtn">Submit</button>
+    <br>
     <div id="result"></div>
 
     <script src="js/graphHandler.js">  </script>

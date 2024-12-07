@@ -17,42 +17,113 @@ void printVectorOfVectors(const std::vector<std::vector<T>>& vec) {
     std::cout << std::endl;
 }
 
-
-void removeCompletedCourses(const std::set<Vertex>* coursesTaken) {
+void removeCompletedCourses(const std::set<Vertex>* coursesTaken, std::vector<semesterVecVertex> *schedule, bool isTakingSummer, int summerIndex, int extraCredLimit){
     // Check for null pointer
-    if (!coursesTaken) {
+    if (!schedule || !coursesTaken) {
+        std::cout << "Empty Schedule or coursesTaken";
         return;
     }
 
-    // For each semester in the schedule
-    for(auto& bin : baseSchedule) {  // Use reference to modify original vector
-        // Iterate through the courses in the bin
-        auto it = bin.begin();
-        while (it != bin.end()) {
-            // Simply check if the vertex index exists in coursesTaken
-            auto found = coursesTaken->find(*it);
-            
-            if (found != coursesTaken->end()) {
-                // Remove the completed course from the bin
-                it = bin.erase(it);
+    if (summerIndex < 0 || summerIndex >= schedule->size()) {
+        std::cerr << "Invalid summerIndex.";
+        return;
+    }
+
+    // Iterate over the schedule to remove completed courses
+    for (auto& semester : *schedule) {
+        auto it = semester.courses.begin();
+        while (it != semester.courses.end()) {
+            // Check if the course is in the set of completed courses
+            if (coursesTaken->count(*it)) {
+                node& nodeData = boost::get(boost::vertex_name, G, (*it));
+                semester.credits = semester.credits - nodeData.getSection().credits;
+                it = semester.courses.erase(it); // Remove course and update iterator
+                
             } else {
-                ++it;
+                ++it; // Advance iterator
             }
         }
     }
 
-    // Remove any empty semesters
-    //baseSchedule.erase(
-    //    std::remove_if(
-    //        baseSchedule.begin(),
-    //        baseSchedule.end(),
-    //        [](const std::vector<Vertex>& semester) {
-    //            return semester.empty();
-    //        }
-    //    ),
-    //    baseSchedule.end()
-    //);
+    // Remove empty semesters from the schedule
+    size_t index = 0;
+    schedule->erase(
+        std::remove_if(
+            schedule->begin(), 
+            schedule->end(), 
+            [&isTakingSummer](const semesterVecVertex& semester) mutable {
+                return semester.courses.empty() && !(isTakingSummer && semester.isSummer);
+            }
+        ), 
+        schedule->end()
+    );
+
+    if(isTakingSummer && !(*schedule)[summerIndex].isSummer){// handle case where out of range
+        for(auto& sem : *schedule){
+            if(sem.isSummer){
+                sem.isSummer = false;
+                sem.maxCredits = 15 + extraCredLimit;
+            }
+        }
+        if((*schedule)[summerIndex].credits <= 9){
+            (*schedule)[summerIndex].isSummer = true;
+            (*schedule)[summerIndex].maxCredits = 9;
+        }else{
+            (*schedule).insert((*schedule).begin() + summerIndex, {});
+            (*schedule)[summerIndex].isSummer = true;
+            (*schedule)[summerIndex].maxCredits = 9;
+        }
+    }
+
+    if(!isTakingSummer){
+        for(auto& sem : *schedule){
+            if(sem.isSummer){
+                sem.isSummer = false;
+                sem.maxCredits = 15 + extraCredLimit;
+            }
+        }
+    }
+
+    return;
+    
 }
+
+//Works on baseSchedule rather than a given schedule
+//void removeCompletedCourses(const std::set<Vertex>* coursesTaken) {
+//    // Check for null pointer
+//    if (!coursesTaken) {
+//        return;
+//    }
+//
+//    // For each semester in the schedule
+//    for(auto& bin : baseSchedule) {  // Use reference to modify original vector
+//        // Iterate through the courses in the bin
+//        auto it = bin.begin();
+//        while (it != bin.end()) {
+//            // Simply check if the vertex index exists in coursesTaken
+//            auto found = coursesTaken->find(*it);
+//            
+//            if (found != coursesTaken->end()) {
+//                // Remove the completed course from the bin
+//                it = bin.erase(it);
+//            } else {
+//                ++it;
+//            }
+//        }
+//    }
+//
+//    // Remove any empty semesters
+//    //baseSchedule.erase(
+//    //    std::remove_if(
+//    //        baseSchedule.begin(),
+//    //        baseSchedule.end(),
+//    //        [](const std::vector<Vertex>& semester) {
+//    //            return semester.empty();
+//    //        }
+//    //    ),
+//    //    baseSchedule.end()
+//    //);
+//}
 
 bool optimizeSchedule(std::vector<semesterVecVertex>& schedule, directedGraphCourses& G) {
     if (schedule.size() <= 1) {
@@ -259,7 +330,7 @@ std::vector<semesterVecVertex> minimizeScheduleHeight(std::vector<semesterVecVer
             std::remove_if(
                 bestSchedule.begin(),
                 bestSchedule.end(),
-                [](const semesterVecVertex& semester) { return semester.courses.empty(); }
+                [](const semesterVecVertex& semester) { return semester.courses.empty() && !(semester.isSummer); }
             ),
             bestSchedule.end()
         );
@@ -270,14 +341,10 @@ std::vector<semesterVecVertex> minimizeScheduleHeight(std::vector<semesterVecVer
 }
 
 
-std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Vertex>* coursesTaken) {
+std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Vertex>* coursesTaken, int extraCredLimit = 0, bool isTakingSummer = true, uint summerIndex = 1) {
 
     directedGraphCourses graphCopy = g;
     std::vector<std::vector<Vertex>> layers;
-
-    //CHANGE REMOVECOMPLETED COURSES TO TAKE THE SCHEDULE BELOW AND REMOVE COURSES FROM IT INSTEAD (KEEPS SUMMER)
-    
-    removeCompletedCourses(coursesTaken);
 
     std::vector<semesterVecVertex> schedule;
     for (size_t semesterIndex = 0; semesterIndex < baseSchedule.size(); ++semesterIndex) {
@@ -297,14 +364,39 @@ std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Ver
             }
         }
         
-        if (semesterIndex == 1) { // Check if we're at the fifth index (zero-based indexing)
+        if (semesterIndex == 4) { // Check if we're at the fifth index (zero-based indexing)
             schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty, 9);
+            schedule.back().isSummer = true;
             continue;
         }
-        schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty);
+        schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty, 15+extraCredLimit);
     }
+
+    
+
+    //If removed summer (what removeCompletedCourses returns), and is taking summer add a summer semester at index specified.
+    removeCompletedCourses(coursesTaken, &schedule, isTakingSummer, summerIndex, extraCredLimit);
 
     //minimizeScheduleHeight(schedule, g)
 
     return minimizeScheduleHeight(schedule, g);
+}
+
+bool isFullTime(directedGraphCourses& g, std::vector<semesterVecVertex> *schedule){
+    
+    for(size_t i = 0; i < schedule->size(); i++){
+        int sum = 0;
+        for(size_t j = 0; j < (*schedule)[i].courses.size(); j++)
+        {
+            if( (*schedule)[i].isSummer ){
+                continue;
+            }
+            node& nodeData = boost::get(boost::vertex_name, g, (*schedule)[i].courses[j]);
+            sum += nodeData.getSection().credits;
+        }
+        if(sum < 12){
+            return false;
+        }
+    }
+    return true;
 }
