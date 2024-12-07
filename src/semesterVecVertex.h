@@ -38,3 +38,18 @@ void printScheduleVertexes(std::vector<semesterVecVertex> &scheduleToPrint){
         semNum++;
     }
 }
+
+float getAverageDifficulty(std::vector<semesterVecVertex> &schedule) {
+    if (schedule.empty()) {
+        return 0.0f;  // Return 0 for empty schedule
+    }
+
+    float totalDifficulty = 0.0f;
+    for (const auto& sem : schedule) {
+        if (sem.courses.size() > 0) {
+            totalDifficulty += sem.difficulty / static_cast<float>(sem.courses.size());
+        }
+    }
+
+    return totalDifficulty / static_cast<float>(schedule.size());
+}

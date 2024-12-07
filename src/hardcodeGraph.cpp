@@ -161,16 +161,16 @@ void hardcodeGraph(){
     node cda2L(3201, "Computer Logic Design Lab", dummySecMediumLabs); 
     node cda3L(4205, "Computer Architecture Lab", dummySecMediumLabs); 
 
-    node GenEd1(2999, "General Elective", dummySecEasy); 
-    node GenEd2(2999, "General Elective", dummySecEasy); 
-    node GenEd3(2999, "General Elective", dummySecEasy); 
-    node GenEd4(2999, "General Elective", dummySecEasy); 
-    node GenEd5(2999, "General Elective", dummySecEasy); 
-    node GenEd6(2999, "General Elective", dummySecEasy); 
-    node GenEd7(2999, "General Elective", dummySecEasy); 
-    node GenEd8(2999, "General Elective", dummySecEasy); 
-    node GenEd9(2999, "General Elective", dummySecEasy); 
-    node GenEd10(2999, "General Elective", dummySecEasy); 
+    node GenEd1(2999, "General Elective", dummySecMedium); 
+    node GenEd2(2999, "General Elective", dummySecMedium); 
+    node GenEd3(2999, "General Elective", dummySecMedium); 
+    node GenEd4(2999, "General Elective", dummySecMedium); 
+    node GenEd5(2999, "General Elective", dummySecMedium); 
+    node GenEd6(2999, "General Elective", dummySecMedium); 
+    node GenEd7(2999, "General Elective", dummySecMedium); 
+    node GenEd8(2999, "General Elective", dummySecMedium); 
+    node GenEd9(2999, "General Elective", dummySecMedium); 
+    node GenEd10(2999, "General Elective", dummySecMedium); 
 
     boost::add_vertex(calc1, G); //0
     boost::add_vertex(calc2, G); //1

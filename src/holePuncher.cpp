@@ -36,7 +36,8 @@ void removeCompletedCourses(const std::set<Vertex>* coursesTaken, std::vector<se
             // Check if the course is in the set of completed courses
             if (coursesTaken->count(*it)) {
                 node& nodeData = boost::get(boost::vertex_name, G, (*it));
-                semester.credits = semester.credits - nodeData.getSection().credits;
+                semester.credits -= nodeData.getSection().credits;
+                semester.difficulty -= nodeData.getSection().difficulty;
                 it = semester.courses.erase(it); // Remove course and update iterator
                 
             } else {
@@ -340,6 +341,99 @@ std::vector<semesterVecVertex> minimizeScheduleHeight(std::vector<semesterVecVer
     return bestSchedule;
 }
 
+bool isCandidate(directedGraphCourses& g, std::vector<semesterVecVertex>* schedule, size_t vertexIndex, 
+                 size_t currIndex, size_t holeIndex, int extraCredLimit = 0) {
+    if (currIndex > holeIndex) {
+        std::cout << "Logic Error in passed values to isCandidate. Curr:" << currIndex << " HI:" << holeIndex;
+        return false; // Added return false for this error case
+    }
+
+    for (size_t i = currIndex; i > holeIndex; i--) {
+        for (auto v : (*schedule)[i].courses) {
+            // Fixed vertex comparison and edge checking
+            if (boost::edge(v, vertexIndex, g).second) {
+                return false;
+            }
+
+            node& nodeData = boost::get(boost::vertex_name, g, v);
+            if (nodeData.getSection().credits + (*schedule)[holeIndex].credits > 15 + extraCredLimit) {
+                return false;
+            }
+        }
+    }
+
+    return true; // Added return true if all checks pass
+}
+
+std::vector<semesterVecVertex> fillSched(directedGraphCourses& g, std::vector<semesterVecVertex>* schedule) {
+    // Iterate through semesters up to the second-to-last semester
+    for (size_t currentSemester = 0; currentSemester < schedule->size() - 1; currentSemester++) {
+        // Only process if current semester has room for more credits
+        if ((*schedule)[currentSemester].credits <= ((*schedule)[currentSemester].maxCredits - 3)) {
+            std::vector<std::pair<size_t, float>> marked;
+
+            // Look ahead through future semesters
+            for (size_t futureSemester = currentSemester + 1; futureSemester < schedule->size(); futureSemester++) {
+                // Check each course in future semesters
+                for (auto futureVertex : (*schedule)[futureSemester].courses) {
+                    // Check if this course is a candidate to move
+                    if (isCandidate(g, schedule, futureVertex, currentSemester, futureSemester)) {
+                        // Get node data for the course
+                        node& nodeData = boost::get(boost::vertex_name, g, futureVertex);
+                        
+                        // Calculate a scoring metric for the course
+                        float score = ((futureSemester - 1)*2 + 
+                            (((*schedule)[futureSemester].difficulty + nodeData.getSection().difficulty) / 
+                            ((*schedule)[futureSemester].courses.size() + 1)) - 3);
+                        
+                        marked.emplace_back(futureVertex, score);
+                    }
+                }
+            }
+
+            // Add courses to current semester until credit limit is reached
+            while (!marked.empty() && 
+                   (*schedule)[currentSemester].credits <= ((*schedule)[currentSemester].maxCredits - 3)) {
+                // Find the best course to move
+                auto bestIt = std::min_element(marked.begin(), marked.end(),
+                    [](const auto& a, const auto& b) { return a.second < b.second; });
+                
+                size_t bestVertex = bestIt->first;
+
+                // Remove this vertex from all other semesters
+                for (size_t otherSemester = 0; otherSemester < schedule->size(); otherSemester++) {
+                    if (otherSemester != currentSemester) {
+                        auto& semesterCourses = (*schedule)[otherSemester].courses;
+                        for (auto it = semesterCourses.begin(); it != semesterCourses.end(); ) {
+                            if (*it == bestVertex) {
+                                node& nodeData = boost::get(boost::vertex_name, g, *it);
+
+                                (*schedule)[otherSemester].credits -= nodeData.getSection().credits;
+                                (*schedule)[otherSemester].difficulty -= nodeData.getSection().difficulty;   
+
+                                it = semesterCourses.erase(it);
+                                break;  // Exit inner loop once vertex is found and removed
+                            } else {
+                                ++it;
+                            }
+                        }
+                    }
+                }
+
+                // Add the course to the current semester
+                node& nodeData = boost::get(boost::vertex_name, g, bestVertex);
+                (*schedule)[currentSemester].courses.emplace_back(bestVertex);
+                (*schedule)[currentSemester].credits += nodeData.getSection().credits;
+                (*schedule)[currentSemester].difficulty += nodeData.getSection().difficulty;
+
+                // Remove this course from consideration
+                marked.erase(bestIt);
+            }
+        }
+    }
+
+    return *schedule;
+}
 
 std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Vertex>* coursesTaken, int extraCredLimit = 0, bool isTakingSummer = true, uint summerIndex = 1) {
 
@@ -378,6 +472,65 @@ std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Ver
     removeCompletedCourses(coursesTaken, &schedule, isTakingSummer, summerIndex, extraCredLimit);
 
     //minimizeScheduleHeight(schedule, g)
+
+    //while(optimizeSchedule(schedule, g)){
+    //    ;
+    //}
+
+    //fillSched(g, &schedule)
+
+    schedule = fillSched(g, &schedule);
+
+    auto it = std::remove_if(schedule.begin(), schedule.end(), 
+        [](const auto& vec) { return vec.courses.empty(); });
+    schedule.erase(it, schedule.end());
+
+    return schedule;
+}
+
+std::vector<semesterVecVertex> scheduleMov(directedGraphCourses& g, std::set<Vertex>* coursesTaken, int extraCredLimit = 0, bool isTakingSummer = true, uint summerIndex = 1) {
+
+    directedGraphCourses graphCopy = g;
+    std::vector<std::vector<Vertex>> layers;
+
+    std::vector<semesterVecVertex> schedule;
+    for (size_t semesterIndex = 0; semesterIndex < baseSchedule.size(); ++semesterIndex) {
+        const auto& semesterVertices = baseSchedule[semesterIndex];
+        std::vector<Vertex> semesterCourses;
+        uint8_t totalCredits = 0;
+        uint16_t totalDifficulty = 0;
+        
+        // Convert vertices to nodes and calculate totals
+        for (const auto& vertex : semesterVertices) {
+            node& nodeData = boost::get(boost::vertex_name, g, vertex);
+            semesterCourses.push_back(vertex);
+            // Add up credits from sections (assuming first section's credits are representative)
+            if (!nodeData.sections.empty()) {
+                totalCredits += nodeData.sections[0].credits;
+                totalDifficulty += nodeData.sections[0].difficulty;
+            }
+        }
+        
+        if (semesterIndex == 4) { // Check if we're at the fifth index (zero-based indexing)
+            schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty, 9);
+            schedule.back().isSummer = true;
+            continue;
+        }
+        schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty, 15+extraCredLimit);
+    }
+
+    
+
+    //If removed summer (what removeCompletedCourses returns), and is taking summer add a summer semester at index specified.
+    removeCompletedCourses(coursesTaken, &schedule, isTakingSummer, summerIndex, extraCredLimit);
+
+    //minimizeScheduleHeight(schedule, g)
+
+    //while(optimizeSchedule(schedule, g)){
+    //    ;
+    //}
+
+    //fillSched(g, &schedule)
 
     return minimizeScheduleHeight(schedule, g);
 }
