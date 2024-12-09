@@ -33,10 +33,11 @@ void printScheduleVertexes(std::vector<semesterVecVertex> &scheduleToPrint){
             node& nodeData = boost::get(boost::vertex_name, G, v);
             std::cout << std::to_string(nodeData.getCRS()) << " " << nodeData.getName() << "\n";
         }
-        std::cout << std::to_string(sem.credits) << " " << std::to_string(sem.maxCredits);
+        std::cout << std::to_string(sem.credits);
         std::cout << std::endl << std::endl;
         semNum++;
     }
+    std::cout << "\nThis plan must be validated by an advisor.";
 }
 
 float getAverageDifficulty(std::vector<semesterVecVertex> &schedule) {

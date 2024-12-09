@@ -343,26 +343,66 @@ std::vector<semesterVecVertex> minimizeScheduleHeight(std::vector<semesterVecVer
 
 bool isCandidate(directedGraphCourses& g, std::vector<semesterVecVertex>* schedule, size_t vertexIndex, 
                  size_t currIndex, size_t holeIndex, int extraCredLimit = 0) {
-    if (currIndex > holeIndex) {
+    
+    // Ensure that the holeIndex is earlier than the currIndex
+    if (currIndex <= holeIndex) {
         std::cout << "Logic Error in passed values to isCandidate. Curr:" << currIndex << " HI:" << holeIndex;
-        return false; // Added return false for this error case
+        return false; 
     }
 
+    // Check semesters between holeIndex and currIndex for prerequisites
+    for (size_t i = holeIndex; i < currIndex; i++) {
+        for (auto v : (*schedule)[i].courses) {
+            // Check if there is an outgoing edge from any course in the intermediate semester to vertexIndex
+            if (boost::edge(v, vertexIndex, g).second) {
+                //std::cout << "Prerequisite edge from course " << v << " to " << vertexIndex << " found. Cannot move course." << std::endl;
+                return false; // Found an edge, so it's not a valid move
+            }
+        }
+    }
+
+    // Check credit limits for the move
     for (size_t i = currIndex; i > holeIndex; i--) {
         for (auto v : (*schedule)[i].courses) {
-            // Fixed vertex comparison and edge checking
-            if (boost::edge(v, vertexIndex, g).second) {
-                return false;
-            }
-
             node& nodeData = boost::get(boost::vertex_name, g, v);
             if (nodeData.getSection().credits + (*schedule)[holeIndex].credits > 15 + extraCredLimit) {
+                return false; // Too many credits
+            }
+            if(nodeData.CRS == 4250 && (holeIndex-currIndex) == 1){
+                return false; //Edge case for ethics course to be taken last semester
+            }
+        }
+    }
+
+    return true; // If no prerequisite edges and credit limits are fine
+}
+
+bool isInputValid(directedGraphCourses& G, std::set<Vertex>* coursesTaken) {
+    // Check for null pointer
+    if (!coursesTaken) {
+        return false;
+    }
+
+    // Iterate through each course in coursesTaken
+    for (const auto& course : *coursesTaken) {
+        // Get incoming edges to this vertex
+        boost::graph_traits<directedGraphCourses>::in_edge_iterator ei, ei_end;
+        
+        // Iterate through all incoming edges
+        for (boost::tie(ei, ei_end) = boost::in_edges(course, G); ei != ei_end; ++ei) {
+            // Get the source vertex of the incoming edge (the prerequisite course)
+            Vertex prerequisite = boost::source(*ei, G);
+            
+            // Check if the prerequisite is not in coursesTaken
+            if (coursesTaken->find(prerequisite) == coursesTaken->end()) {
+                // Prerequisite is missing from coursesTaken
                 return false;
             }
         }
     }
 
-    return true; // Added return true if all checks pass
+    // All prerequisites are present
+    return true;
 }
 
 std::vector<semesterVecVertex> fillSched(directedGraphCourses& g, std::vector<semesterVecVertex>* schedule) {
@@ -377,14 +417,14 @@ std::vector<semesterVecVertex> fillSched(directedGraphCourses& g, std::vector<se
                 // Check each course in future semesters
                 for (auto futureVertex : (*schedule)[futureSemester].courses) {
                     // Check if this course is a candidate to move
-                    if (isCandidate(g, schedule, futureVertex, currentSemester, futureSemester)) {
+                    if (isCandidate(g, schedule, futureVertex, futureSemester, currentSemester)) {
                         // Get node data for the course
                         node& nodeData = boost::get(boost::vertex_name, g, futureVertex);
                         
                         // Calculate a scoring metric for the course
-                        float score = ((futureSemester - 1)*2 + 
-                            (((*schedule)[futureSemester].difficulty + nodeData.getSection().difficulty) / 
-                            ((*schedule)[futureSemester].courses.size() + 1)) - 3);
+                        float score = ((futureSemester - 1) * 0.7+ 
+                        std::abs(static_cast<float>((((*schedule)[futureSemester].difficulty + nodeData.getSection().difficulty) / 
+                        ((*schedule)[futureSemester].courses.size() + 1)) - 3)));
                         
                         marked.emplace_back(futureVertex, score);
                     }
@@ -466,7 +506,10 @@ std::vector<semesterVecVertex> scheduleFit(directedGraphCourses& g, std::set<Ver
         schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty, 15+extraCredLimit);
     }
 
-    
+    if(!isInputValid(g, coursesTaken)){
+        std::cout << "Invalid Schedule. See an advisor";
+        exit(0);
+    }
 
     //If removed summer (what removeCompletedCourses returns), and is taking summer add a summer semester at index specified.
     removeCompletedCourses(coursesTaken, &schedule, isTakingSummer, summerIndex, extraCredLimit);
@@ -519,7 +562,10 @@ std::vector<semesterVecVertex> scheduleMov(directedGraphCourses& g, std::set<Ver
         schedule.emplace_back(semesterCourses, totalCredits, totalDifficulty, 15+extraCredLimit);
     }
 
-    
+    if(!isInputValid(g, coursesTaken)){
+        std::cout << "Invalid Schedule. See an advisor";
+        exit(0);
+    }
 
     //If removed summer (what removeCompletedCourses returns), and is taking summer add a summer semester at index specified.
     removeCompletedCourses(coursesTaken, &schedule, isTakingSummer, summerIndex, extraCredLimit);

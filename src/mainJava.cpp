@@ -25,12 +25,16 @@ int main(int argc, char* argv[]){
     std::vector<std::string> nodes;
 
     // Process command-line arguments
-    for (int i = 2; i < argc; ++i) { // Start from 2 to skip the program name and count
+    //std::cout << "NODES GOT ";
+    for (int i = 2; i < nodeCount+2; ++i) { // Start from 2 to skip the program name and count
         nodes.push_back(argv[i]);
+        //std::cout << " " << argv[i];
     }
+    std::cout << std::endl;
 
     bool isTakingSummer = std::stoi(argv[argc - 2]) != 0; // If "1", it's true; else, false
     int summerIndex = std::stoi(argv[argc - 1]); 
+    summerIndex--;
 
 
 
@@ -64,13 +68,23 @@ int main(int argc, char* argv[]){
 
 
     std::vector<semesterVecVertex> fittedSchedule = scheduleFit(G, &vertexSet, 0, isTakingSummer, summerIndex);
-
+    std::vector<semesterVecVertex> fittedSchedule2;
     printScheduleVertexes(fittedSchedule);
 
-    for(int i = 0; i < 4; i++){
+
+    for(int i = 1; i < 4; i++){
         fittedSchedule = scheduleFit(G, &vertexSet, i, isTakingSummer, summerIndex);
-        if( isFullTime(G, &fittedSchedule)){
-            std::cout<<"Alternative: \n\n";
+        fittedSchedule2 = scheduleMov(G, &vertexSet, 0, isTakingSummer, summerIndex);
+        
+        if(fittedSchedule.size() <= fittedSchedule2.size()){
+            //std::cout << " Fit";
+        }else{
+            fittedSchedule = fittedSchedule2;
+            //std::cout << " Mov";
+        }
+        
+        if(isFullTime(G, &fittedSchedule)){
+            std::cout<<"\n\n\n\nAlternative: \n\n";
             printScheduleVertexes(fittedSchedule);
         }
     }
