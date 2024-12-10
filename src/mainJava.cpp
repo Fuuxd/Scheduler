@@ -5,13 +5,8 @@
 
 #include "config.h"
 #include "node.h"
-#include "semesterVector.h"
-#include "holePuncher.cpp"
-
 #include "hardcodeGraph.cpp"
-//#include "hardcodeGraphSmall.cpp"
-
-#include "numberOfTopo.h"
+#include "holePuncher.cpp"
 
 
 int main(int argc, char* argv[]){
@@ -68,20 +63,11 @@ int main(int argc, char* argv[]){
 
 
     std::vector<semesterVecVertex> fittedSchedule = scheduleFit(G, &vertexSet, 0, isTakingSummer, summerIndex);
-    std::vector<semesterVecVertex> fittedSchedule2;
     printScheduleVertexes(fittedSchedule);
 
 
     for(int i = 1; i < 4; i++){
-        fittedSchedule = scheduleFit(G, &vertexSet, i, isTakingSummer, summerIndex);
-        fittedSchedule2 = scheduleMov(G, &vertexSet, 0, isTakingSummer, summerIndex);
-        
-        if(fittedSchedule.size() <= fittedSchedule2.size()){
-            //std::cout << " Fit";
-        }else{
-            fittedSchedule = fittedSchedule2;
-            //std::cout << " Mov";
-        }
+        fittedSchedule = scheduleFit(G, &vertexSet, 0, isTakingSummer, summerIndex);
         
         if(isFullTime(G, &fittedSchedule)){
             std::cout<<"\n\n\n\nAlternative: \n\n";

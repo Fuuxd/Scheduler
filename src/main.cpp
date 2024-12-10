@@ -7,14 +7,9 @@
 
 #include "config.h"
 #include "node.h"
-#include "semesterVector.h"
 #include "holePuncher.cpp"
-
 #include "hardcodeGraph.cpp"
 //#include "hardcodeGraphSmall.cpp"
-
-#include "numberOfTopo.h"
-
 
 int main(){
 
@@ -102,7 +97,6 @@ int main(){
     htmlFile.close();
     std::cout << "Base Schedule HTML has been written to schedule.html.\n";
 
-    std::vector<semesterVector> binnedSchedule;
 
     //binnedSchedule = layeredBinningFirst(G, creditsPerSemester, genElectives, nodeLabs);
     
